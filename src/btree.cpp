@@ -32,7 +32,21 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		const int attrByteOffset,
 		const Datatype attrType)
 {
+	// Index File Name
+	std::ostringstream idxStr;
+	idxStr << relationName << '.' << attrByteOffset;
+	std::string indexName = idxStr.str();
 
+	// check if the index file exists yet
+	// Have to fix this
+	try {
+		File indexFile = new File(indexName, true);
+	} catch (FileExistsException ex) {
+
+	}
+
+	// set hte out name
+	outIndexName = indexName;
 }
 
 
