@@ -146,6 +146,14 @@ namespace badgerdb
 
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
+
+	}
+
+	// ------------------------------------------------------------------------------
+	// Recursicve insert
+	// ------------------------------------------------------------------------------
+	PageId BTreeIndex::recursiveInsert(const void *key, const RecordId rid, PageId currPage) {
+		
 	}
 
 	// -----------------------------------------------------------------------------
