@@ -15,6 +15,7 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
+#include <climits>
 
 //#define DEBUG
 
@@ -83,7 +84,11 @@ namespace badgerdb
 			header = reinterpret_cast<IndexMetaInfo*>(temp);
 			
 			//Initialize empty root
+			NonLeafNodeInt* root;
 			bufMgr->allocPage(file, rootPageNum, temp);
+			root = reinterpret_cast<NonLeafNodeInt*>(temp);
+			std::fill(root->keyArray,root->keyArray+nodeOccupancy,INT_MAX);
+			std::fill(root->pageNoArray,root->pageNoArray+nodeOccupancy,-1);
 			bufMgr->unPinPage(file, rootPageNum, true);
 
 			//fill header info
@@ -129,6 +134,7 @@ namespace badgerdb
 
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
+
 	}
 
 	// -----------------------------------------------------------------------------
