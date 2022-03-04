@@ -15,6 +15,7 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
+#include "exceptions/page_pinned_exception.h"
 #include <climits>
 
 //#define DEBUG
@@ -32,11 +33,11 @@ namespace badgerdb
 						   const int attrByteOffset,
 						   const Datatype attrType)
 	{
-		
-		//initalize vars
+
+		// initalize vars
 		this->bufMgr = bufMgrIn;
 		this->headerPageNum = 1;
-		this-> attrByteOffset = attrByteOffset;
+		this->attrByteOffset = attrByteOffset;
 		this->attributeType = attrType;
 		this->scanExecuting = false;
 		this->leafOccupancy = INTARRAYLEAFSIZE;
@@ -49,71 +50,72 @@ namespace badgerdb
 
 		try
 		{
-			//if the index already exists
+			// if the index already exists
 			BlobFile indexFile = BlobFile::open(outIndexName);
 			this->file = &indexFile;
-			Page* temp;
-			IndexMetaInfo* header;
+			Page *temp;
+			IndexMetaInfo *header;
 			bufMgr->readPage(file, headerPageNum, temp);
 
-			//check vailidy of index
-			header = reinterpret_cast<IndexMetaInfo*>(temp);
-			if(std::string(header->relationName) != relationName||
-			   header->attrByteOffset != attrByteOffset||
-			   header->attrType != attrType)
+			// check vailidy of index
+			header = reinterpret_cast<IndexMetaInfo *>(temp);
+			if (std::string(header->relationName) != relationName ||
+				header->attrByteOffset != attrByteOffset ||
+				header->attrType != attrType)
 			{
 				throw BadIndexInfoException("Invalid index was found!");
 			}
 
-			//update root
-			this -> rootPageNum = header->rootPageNo;
-			bufMgr ->unPinPage(file,headerPageNum,false);
-
+			// update root
+			this->rootPageNum = header->rootPageNo;
+			bufMgr->unPinPage(file, headerPageNum, false);
 		}
-		catch (FileNotFoundException* ex)
+		catch (FileNotFoundException *ex)
 		{
-			//no pre-existing index
+			// no pre-existing index
 			BlobFile indexFile = BlobFile::create(outIndexName);
 			this->file = &indexFile;
-			this -> rootPageNum = 2;
+			this->rootPageNum = 2;
 
-			//create header page
-			Page* temp;
-			IndexMetaInfo* header;
+			// create header page
+			Page *temp;
+			IndexMetaInfo *header;
 			bufMgr->allocPage(file, headerPageNum, temp);
-			header = reinterpret_cast<IndexMetaInfo*>(temp);
-			
-			//Initialize empty root
-			NonLeafNodeInt* root;
+			header = reinterpret_cast<IndexMetaInfo *>(temp);
+
+			// Initialize empty root
+			NonLeafNodeInt *root;
 			bufMgr->allocPage(file, rootPageNum, temp);
-			root = reinterpret_cast<NonLeafNodeInt*>(temp);
-			std::fill(root->keyArray,root->keyArray+nodeOccupancy,INT_MAX);
-			std::fill(root->pageNoArray,root->pageNoArray+nodeOccupancy,-1);
+			root = reinterpret_cast<NonLeafNodeInt *>(temp);
+			std::fill(root->keyArray, root->keyArray + nodeOccupancy, INT_MAX);
+			std::fill(root->pageNoArray, root->pageNoArray + nodeOccupancy, -1);
 			bufMgr->unPinPage(file, rootPageNum, true);
 
-			//fill header info
-			relationName.copy(header->relationName,20);
+			// fill header info
+			relationName.copy(header->relationName, 20);
 			header->attrByteOffset = attrByteOffset;
 			header->attrType = attrType;
-			header->rootPageNo = this -> rootPageNum;
-			bufMgr ->unPinPage(file,headerPageNum,true);
-			
+			header->rootPageNo = this->rootPageNum;
+			bufMgr->unPinPage(file, headerPageNum, true);
 
-
-			//populate index
+			// populate index
 			FileScan scanner(relationName, bufMgr);
 			std::string recordStr;
 			RecordId rid;
 			const char *record;
-			const void* key;
-			while(true){
-				try{
+			const void *key;
+			while (true)
+			{
+				try
+				{
 					scanner.scanNext(rid);
 					recordStr = scanner.getRecord();
 					record = recordStr.c_str();
-                                	key = record+attrByteOffset;
-					this->insertEntry(key,rid);
-				}catch(EndOfFileException* x){
+					key = record + attrByteOffset;
+					this->insertEntry(key, rid);
+				}
+				catch (EndOfFileException *x)
+				{
 					break;
 				}
 			}
@@ -127,8 +129,11 @@ namespace badgerdb
 	BTreeIndex::~BTreeIndex()
 	{
 		// endscan
-		if(scanExecuting) {endScan();}
-		
+		if (scanExecuting)
+		{
+			endScan();
+		}
+
 		// flush the file
 		bufMgr->flushFile(this->file);
 
@@ -141,7 +146,6 @@ namespace badgerdb
 
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
-
 	}
 
 	// -----------------------------------------------------------------------------
@@ -169,6 +173,16 @@ namespace badgerdb
 	//
 	void BTreeIndex::endScan()
 	{
+		if (!scanExecuting)
+			throw ScanNotInitializedException("No scan in progress!");
+
+		// Set all values to null
+		this->scanExecuting = 0;
+		this->highValInt = -1;
+		this->lowValInt = -1;
+		this->nextEntry = -1;
+		this->currentPageData = 0;
+		this->currentPageNum = -1;
 	}
 
 }
