@@ -38,6 +38,8 @@ namespace badgerdb
 		this-> attrByteOffset = attrByteOffset;
 		this->attributeType = attrType;
 		this->scanExecuting = false;
+		this->leafOccupancy = INTARRAYLEAFSIZE;
+		this->nodeOccupancy = INTARRAYNONLEAFSIZE;
 
 		// Index File Name
 		std::ostringstream idxStr;
@@ -79,6 +81,10 @@ namespace badgerdb
 			IndexMetaInfo* header;
 			bufMgr->allocPage(file, headerPageNum, temp);
 			header = reinterpret_cast<IndexMetaInfo*>(temp);
+			
+			//Initialize empty root
+			bufMgr->allocPage(file, rootPageNum, temp);
+			bufMgr->unPinPage(file, rootPageNum, true);
 
 			//fill header info
 			relationName.copy(header->relationName,20);
@@ -86,6 +92,8 @@ namespace badgerdb
 			header->attrType = attrType;
 			header->rootPageNo = this -> rootPageNum;
 			bufMgr ->unPinPage(file,headerPageNum,true);
+			
+
 
 			//populate index
 			FileScan scanner(relationName, bufMgr);
