@@ -113,6 +113,13 @@ namespace badgerdb
 
 	BTreeIndex::~BTreeIndex()
 	{
+		// endscan
+		if(scanExecuting) {endScan();}
+		
+		// flush the file
+		bufMgr->flushFile(this->file);
+
+		delete file;
 	}
 
 	// -----------------------------------------------------------------------------
