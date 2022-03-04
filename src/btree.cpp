@@ -31,34 +31,63 @@ namespace badgerdb
 						   const int attrByteOffset,
 						   const Datatype attrType)
 	{
+
+		this->bufMgr = bufMgrIn;
+		this->headerPageNum = 1;
+		this-> attrByteOffset = attrByteOffset;
+		this->attributeType = attrType;
+		this->scanExecuting = false;
 		// Index File Name
 		std::ostringstream idxStr;
 		idxStr << relationName << '.' << attrByteOffset;
-		std::string indexName = idxStr.str();
+		outIndexName = idxStr.str();
 
-		// pointer to the indexFile
-		BlobFile *indexFile = nullptr;
-
-		// check if the index file exists yet
-		// Have to fix this?
 		try
 		{
-			indexFile = new BlobFile(indexName, true);
+			BlobFile indexFile = BlobFile::open(outIndexName);
+			this->file = &indexFile;
+			Page* temp;
+			IndexMetaInfo* header;
+			bufMgr->readPage(file, headerPageNum, temp);
+			header = reinterpret_cast<IndexMetaInfo*>(temp);
+			if(std::string(header->relationName) != relationName||
+			   header->attrByteOffset != attrByteOffset||
+			   header->attrType != attrType)
+			{
+				throw BadIndexInfoException("Invalid index was found!");
+			}
+			this -> rootPageNum = header->rootPageNo;
+			bufMgr ->unPinPage(file,headerPageNum,false);
 
-			// Use the FileScan class to build the index on the input relation
-			FileScan *scanner = new FileScan(relationName, bufMgrIn);
+		}
+		catch (FileNotFoundException* ex)
+		{
+			BlobFile indexFile = BlobFile::create(outIndexName);
+			this->file = &indexFile;
+			this -> rootPageNum = 2;
+			Page* temp;
+			IndexMetaInfo* header;
+			bufMgr->allocPage(file, headerPageNum, temp);
+			header = reinterpret_cast<IndexMetaInfo*>(temp);
+			header->relationName = relationName.c_str();
+			header->attrByteOffset = attrByteOffset;
+			header->attrType = attrType;
+			header->rootPageNo = this -> rootPageNum;
+			bufMgr ->unPinPage(file,headerPageNum,true);
+			FileScan scanner(relationName, bufMgr);
 
-			// get records from the file, come up with a key
+			std::string record;
+			RecordId rid;
+			while(true){
+				try{
+					scanner.scanNext(rid);
+					record = scanner.getRecord();
+					this->insertEntry(KEY TO BE PARSED,rid);
+				}catch(EndOfFileException* ex){
+					break;
+				}
+			}
 		}
-		catch (FileExistsException ex)
-		{ // if the file already exists, do nothing, keep file open
-		}
-		catch (FileNotFoundException ex)
-		{ // relation does not exist (thrown from FileScan instantiation)
-		}
-
-		// set the out index name
-		outIndexName = indexName;
 	}
 
 	// -----------------------------------------------------------------------------
