@@ -31,12 +31,14 @@ namespace badgerdb
 						   const int attrByteOffset,
 						   const Datatype attrType)
 	{
-
+		
+		//initalize vars
 		this->bufMgr = bufMgrIn;
 		this->headerPageNum = 1;
 		this-> attrByteOffset = attrByteOffset;
 		this->attributeType = attrType;
 		this->scanExecuting = false;
+
 		// Index File Name
 		std::ostringstream idxStr;
 		idxStr << relationName << '.' << attrByteOffset;
@@ -44,11 +46,14 @@ namespace badgerdb
 
 		try
 		{
+			//if the index already exists
 			BlobFile indexFile = BlobFile::open(outIndexName);
 			this->file = &indexFile;
 			Page* temp;
 			IndexMetaInfo* header;
 			bufMgr->readPage(file, headerPageNum, temp);
+
+			//check vailidy of index
 			header = reinterpret_cast<IndexMetaInfo*>(temp);
 			if(std::string(header->relationName) != relationName||
 			   header->attrByteOffset != attrByteOffset||
@@ -56,34 +61,46 @@ namespace badgerdb
 			{
 				throw BadIndexInfoException("Invalid index was found!");
 			}
+
+			//update root
 			this -> rootPageNum = header->rootPageNo;
 			bufMgr ->unPinPage(file,headerPageNum,false);
 
 		}
 		catch (FileNotFoundException* ex)
 		{
+			//no pre-existing index
 			BlobFile indexFile = BlobFile::create(outIndexName);
 			this->file = &indexFile;
 			this -> rootPageNum = 2;
+
+			//create header page
 			Page* temp;
 			IndexMetaInfo* header;
 			bufMgr->allocPage(file, headerPageNum, temp);
 			header = reinterpret_cast<IndexMetaInfo*>(temp);
+
+			//fill header info
 			header->relationName = relationName.c_str();
 			header->attrByteOffset = attrByteOffset;
 			header->attrType = attrType;
 			header->rootPageNo = this -> rootPageNum;
 			bufMgr ->unPinPage(file,headerPageNum,true);
-			FileScan scanner(relationName, bufMgr);
 
-			std::string record;
+			//populate index
+			FileScan scanner(relationName, bufMgr);
+			std::string recordStr;
 			RecordId rid;
+			const char *record;
+			const void* key;
 			while(true){
 				try{
 					scanner.scanNext(rid);
-					record = scanner.getRecord();
-					this->insertEntry(KEY TO BE PARSED,rid);
-				}catch(EndOfFileException* ex){
+					recordStr = scanner.getRecord();
+					record = recordStr.c_str();
+                                	key = record+attrByteOffset;
+					this->insertEntry(key,rid);
+				}catch(EndOfFileException* x){
 					break;
 				}
 			}
