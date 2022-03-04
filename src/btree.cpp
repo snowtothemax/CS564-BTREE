@@ -81,7 +81,7 @@ namespace badgerdb
 			header = reinterpret_cast<IndexMetaInfo*>(temp);
 
 			//fill header info
-			header->relationName = relationName.c_str();
+			relationName.copy(header->relationName,20);
 			header->attrByteOffset = attrByteOffset;
 			header->attrType = attrType;
 			header->rootPageNo = this -> rootPageNum;
