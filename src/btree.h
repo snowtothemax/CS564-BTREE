@@ -156,6 +156,9 @@ struct NonLeafNodeInt{
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
 	PageId pageNoArray[ INTARRAYNONLEAFSIZE + 1 ];
+
+  // current number of keys in the key array
+  int numKeys;
 };
 
 
@@ -178,7 +181,15 @@ struct LeafNodeInt{
 	 * This linking of leaves allows to easily move from one leaf to the next leaf during index scan.
    */
 	PageId rightSibPageNo;
+
+  // current number of keys inf the key array
+  int numKeys;
 };
+
+struct KeyPagePair{
+  int key;
+  PageId pageId;
+}
 
 
 /**
@@ -329,6 +340,17 @@ class BTreeIndex {
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
 	**/
 	void insertEntry(const void* key, const RecordId rid);
+
+  /**
+   * @brief Recursive insert function for the BTree
+   * 
+   * @param key 
+   * @param rid 
+   * @param isLeaf 
+   * @param currPage 
+   * @return KeyPagePair - KeyPagePair in which to push up
+   */
+  KeyPagePair* recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage)
 
 
   /**
