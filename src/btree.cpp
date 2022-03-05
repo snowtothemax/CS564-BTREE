@@ -505,7 +505,7 @@ namespace badgerdb
 			throw ScanNotInitializedException("No scan in progress!");
 
 		// Set all values to null
-		this->scanExecuting = 0;
+		this->scanExecuting = false;
 		this->highValInt = -1;
 		this->lowValInt = -1;
 		this->nextEntry = -1;
