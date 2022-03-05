@@ -146,14 +146,43 @@ namespace badgerdb
 
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
-
+		recursiveInsert(*((int*)key), rid, false, this->rootPageNum);
 	}
 
 	// ------------------------------------------------------------------------------
 	// Recursicve insert
+	// Returns a PageId when splitting occurs
 	// ------------------------------------------------------------------------------
-	PageId BTreeIndex::recursiveInsert(const void *key, const RecordId rid, PageId currPage) {
-		
+	PageId BTreeIndex::recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPageId)
+	{
+		if (!isLeaf) // look for leaf
+		{
+			// get the page
+			Page *temp;
+			NonLeafNodeInt *currNode;
+			this->bufMgr->readPage(this->file, currPageId, temp);
+			currNode = reinterpret_cast<NonLeafNodeInt *>(temp);
+			int index = 0;
+
+			// compare keys in the list. Find index to go into
+			for(int currKey : currNode->keyArray) {
+				if (key < currKey) {
+					break;
+				}
+
+				index++;
+			}
+
+			// check whether the next node is a leaf or not
+
+			PageId returnedId = recursiveInsert(key, rid, )
+
+			// unpin page
+			this->bufMgr->unPinPage(this->file, currPage, false);
+		}
+		else // insert into leaf
+		{
+		}
 	}
 
 	// -----------------------------------------------------------------------------

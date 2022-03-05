@@ -329,6 +329,17 @@ class BTreeIndex {
 	**/
 	void insertEntry(const void* key, const RecordId rid);
 
+  /**
+   * @brief Recursive insert function for the BTree
+   * 
+   * @param key 
+   * @param rid 
+   * @param isLeaf 
+   * @param currPage 
+   * @return PageId - Page to either push or copy up
+   */
+  PageId recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage)
+
 
   /**
 	 * Begin a filtered scan of the index.  For instance, if the method is called 
