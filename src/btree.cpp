@@ -158,6 +158,7 @@ namespace badgerdb
 		// get the page
 		Page *temp;
 		this->bufMgr->readPage(this->file, currPageId, temp);
+
 		if (!isLeaf) // look for leaf
 		{
 			NonLeafNodeInt *currNode;
@@ -195,14 +196,136 @@ namespace badgerdb
 
 			// check if there is enough space available on the leaf
 			// I.E NO SPLITTING
-			if (currNode->numKeys + 1 <= INTARRAYNONLEAFSIZE)
+			if (currNode->numKeys + 1 <= INTARRAYLEAFSIZE)
 			{
-				currNode->keyArray[currNode->numKeys] = key;
-				currNode->ridArray[currNode->numKeys] = rid;
+				int i = 0;
+				// find where to insert
+				while (i < currNode->numKeys)
+				{
+					if (currNode->keyArray[i] > key)
+					{
+						// Shift contents of keyarray
+						for (int l = currNode->numKeys; l > i; l--)
+						{
+							currNode->keyArray[l] = currNode->keyArray[l - 1];
+						}
+						// shift contents of ridArray
+						for (int k = currNode->numKeys; k > i; k--)
+						{
+							currNode->ridArray[k] = currNode->ridArray[k - 1];
+						}
+
+						// after contents shifted, exit
+						break;
+					}
+					i += 1;
+				}
+
+				// insert key and rid at specified positions
+				currNode->keyArray[i] = key;
+				currNode->ridArray[i] = rid;
 				currNode->numKeys += 1;
+
+				// unpin page and return
+				this->bufMgr->unPinPage(this->file, currPageId, true);
+				return nullptr;
 			}
 			else // SPLITTING TIME BABY
 			{
+				// remember with leaf nodes, we COPY up instead of pushing up
+				// create sibling
+				Page *newSibPage;
+				LeafNodeInt *newSibNode;
+				PageId sibId;
+				this->bufMgr->allocPage(this->file, sibId, newSibPage);
+				newSibNode = reinterpret_cast<LeafNodeInt *>(newSibPage);
+				newSibNode->numKeys = 0;
+
+				// copy contents of old array into new array
+				for (int i = INTARRAYLEAFSIZE / 2; i < INTARRAYLEAFSIZE)
+				{
+					newSibNode->keyArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->keyArray[i];
+					newSibNode->ridArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->ridArray[i];
+					currNode->numKeys -= 1;
+					newSibNode->numKeys += 1;
+				}
+
+				// have new sibling point to original nodes neighbor
+				newSibNode->rightSibPageNo = currNode->rightSibPageNo;
+				currNode->rightSibPageNo = sibId;
+
+				// now we insert the value as we did before
+				if (newSibNode->keyArray[0] > key) // insert into orig sib
+				{
+					int i = 0;
+					// find where to insert
+					while (i < currNode->numKeys)
+					{
+						if (currNode->keyArray[i] > key)
+						{
+							// Shift contents of keyarray
+							for (int l = currNode->numKeys; l > i; l--)
+							{
+								currNode->keyArray[l] = currNode->keyArray[l - 1];
+							}
+							// shift contents of ridArray
+							for (int k = currNode->numKeys; k > i; k--)
+							{
+								currNode->ridArray[k] = currNode->ridArray[k - 1];
+							}
+
+							// after contents shifted, exit
+							break;
+						}
+						i += 1;
+					}
+
+					// insert key and rid at specified positions
+					currNode->keyArray[i] = key;
+					currNode->ridArray[i] = rid;
+					currNode->numKeys += 1;
+				}
+				else // insert into new sib
+				{
+					int i = 0;
+					// find where to insert
+					while (i < newSibNode->numKeys)
+					{
+						if (newSibNode->keyArray[i] > key)
+						{
+							// Shift contents of keyarray
+							for (int l = newSibNode->numKeys; l > i; l--)
+							{
+								newSibNode->keyArray[l] = newSibNode->keyArray[l - 1];
+							}
+							// shift contents of ridArray
+							for (int k = newSibNode->numKeys; k > i; k--)
+							{
+								newSibNode->ridArray[k] = newSibNode->ridArray[k - 1];
+							}
+
+							// after contents shifted, exit
+							break;
+						}
+						i += 1;
+					}
+
+					// insert key and rid at specified positions
+					newSibNode->keyArray[i] = key;
+					newSibNode->ridArray[i] = rid;
+					newSibNode->numKeys += 1;
+				}
+
+				// close both nodes and push up inserted values
+				KeyPagePair *pair;
+				pair->key = newSibNode->keyArray[0];
+				pair->pageId = sibId;
+
+				// unpinPages
+				this->bufMgr->unPinPage(this->file, currPageId, true);
+				this->bufMgr->unPinPage(this->file, sibId, true);
+
+				return pair;
 			}
 		}
 
