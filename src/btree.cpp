@@ -146,27 +146,29 @@ namespace badgerdb
 
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
-		recursiveInsert(*((int*)key), rid, false, this->rootPageNum);
+		recursiveInsert(*((int *)key), rid, false, this->rootPageNum);
 	}
 
 	// ------------------------------------------------------------------------------
 	// Recursicve insert
 	// Returns a KeyPagePair to push up when splitting
 	// ------------------------------------------------------------------------------
-	KeyPagePair* BTreeIndex::recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPageId)
+	KeyPagePair *BTreeIndex::recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPageId)
 	{
+		// get the page
+		Page *temp;
+		this->bufMgr->readPage(this->file, currPageId, temp);
 		if (!isLeaf) // look for leaf
 		{
-			// get the page
-			Page *temp;
 			NonLeafNodeInt *currNode;
-			this->bufMgr->readPage(this->file, currPageId, temp);
 			currNode = reinterpret_cast<NonLeafNodeInt *>(temp);
 
 			// index to look for in the page array
 			int index = 0;
-			for(int currKey : currNode->keyArray) {
-				if (key < currKey) {
+			for (int currKey : currNode->keyArray)
+			{
+				if (key < currKey)
+				{
 					break;
 				}
 				index++;
@@ -174,24 +176,38 @@ namespace badgerdb
 
 			// check whether the next node is a leaf or not
 			bool isNextLeaf = false;
-			if(currNode->level == 1) {
+			if (currNode->level == 1)
+			{
 				isNextLeaf = true;
 			}
 
-			// recursive call
+			// recursive call. check if splitting has occurred
 			KeyPagePair *pairToAdd = recursiveInsert(key, rid, isNextLeaf, currNode->pageNoArray[index]);
-
-			// unpin page
-			this->bufMgr->unPinPage(this->file, currPageId, false);
+			if (pairToAdd != nullptr)
+			{
+				// check if there is space for the key page pair in the current array
+			}
 		}
 		else // insert into leaf
 		{
-			// get the page
-			Page *temp;
 			LeafNodeInt *currNode;
-			this->bufMgr->readPage(this->file, currPageId, temp);
 			currNode = reinterpret_cast<LeafNodeInt *>(temp);
+
+			// check if there is enough space available on the leaf
+			// I.E NO SPLITTING
+			if (currNode->numKeys + 1 <= INTARRAYNONLEAFSIZE)
+			{
+				currNode->keyArray[currNode->numKeys] = key;
+				currNode->ridArray[currNode->numKeys] = rid;
+				currNode->numKeys += 1;
+			}
+			else // SPLITTING TIME BABY
+			{
+			}
 		}
+
+		// unpin page. HAVE TO MOVE TO BEFORE RETURNS ONCE IMPLEMENTED
+		this->bufMgr->unPinPage(this->file, currPageId, false);
 	}
 
 	// -----------------------------------------------------------------------------
