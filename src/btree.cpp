@@ -151,9 +151,9 @@ namespace badgerdb
 
 	// ------------------------------------------------------------------------------
 	// Recursicve insert
-	// Returns a PageId when splitting occurs
+	// Returns a KeyPagePair to push up when splitting
 	// ------------------------------------------------------------------------------
-	PageId BTreeIndex::recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPageId)
+	KeyPagePair* BTreeIndex::recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPageId)
 	{
 		if (!isLeaf) // look for leaf
 		{
@@ -162,26 +162,35 @@ namespace badgerdb
 			NonLeafNodeInt *currNode;
 			this->bufMgr->readPage(this->file, currPageId, temp);
 			currNode = reinterpret_cast<NonLeafNodeInt *>(temp);
-			int index = 0;
 
-			// compare keys in the list. Find index to go into
+			// index to look for in the page array
+			int index = 0;
 			for(int currKey : currNode->keyArray) {
 				if (key < currKey) {
 					break;
 				}
-
 				index++;
 			}
 
 			// check whether the next node is a leaf or not
+			bool isNextLeaf = false;
+			if(currNode->level == 1) {
+				isNextLeaf = true;
+			}
 
-			PageId returnedId = recursiveInsert(key, rid, )
+			// recursive call
+			KeyPagePair *pairToAdd = recursiveInsert(key, rid, isNextLeaf, currNode->pageNoArray[index]);
 
 			// unpin page
-			this->bufMgr->unPinPage(this->file, currPage, false);
+			this->bufMgr->unPinPage(this->file, currPageId, false);
 		}
 		else // insert into leaf
 		{
+			// get the page
+			Page *temp;
+			LeafNodeInt *currNode;
+			this->bufMgr->readPage(this->file, currPageId, temp);
+			currNode = reinterpret_cast<LeafNodeInt *>(temp);
 		}
 	}
 

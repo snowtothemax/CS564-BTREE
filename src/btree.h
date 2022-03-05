@@ -179,6 +179,11 @@ struct LeafNodeInt{
 	PageId rightSibPageNo;
 };
 
+struct KeyPagePair{
+  int key;
+  PageId pageId;
+}
+
 
 /**
  * @brief BTreeIndex class. It implements a B+ Tree index on a single attribute of a
@@ -336,9 +341,9 @@ class BTreeIndex {
    * @param rid 
    * @param isLeaf 
    * @param currPage 
-   * @return PageId - Page to either push or copy up
+   * @return KeyPagePair - KeyPagePair in which to push up
    */
-  PageId recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage)
+  KeyPagePair* recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage)
 
 
   /**
