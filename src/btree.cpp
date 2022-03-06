@@ -92,9 +92,23 @@ namespace badgerdb
 
 			root = reinterpret_cast<NonLeafNodeInt*>(temp);
 			std::fill(root->keyArray,root->keyArray+nodeOccupancy,INT_MAX);
-			std::fill(root->pageNoArray,root->pageNoArray+nodeOccupancy,-1);
+			std::fill(root->pageNoArray,root->pageNoArray+nodeOccupancy,0);
 			root -> level = 1;
+
+			// Initialize first leaf
+                        LeafNodeInt *leaf;
+			int leafNum;
+                        bufMgr->allocPage(file, leafNum, temp);
+
+                        leaf = reinterpret_cast<NonLeafNodeInt*>(temp);
+                        std::fill(leaf->keyArray,leaf->keyArray+nodeOccupancy,INT_MAX);
+                        std::fill(leaf->ridArray,leaf->ridArray+leafOccupancy,0);
+                        leaf -> rightSibPageNo = 0;
+			
+			root ->pageNoArray[0] = leafNum;
+
 			bufMgr->unPinPage(file, rootPageNum, true);
+                        bufMgr->unPinPage(file, leafNum, true);
 
 			// fill header info
 			relationName.copy(header->relationName, 20);
@@ -453,7 +467,7 @@ namespace badgerdb
 					break;
 				}
 			}
-			if(next == -1){
+			if(next == 0){
 				scanExecuting = false;
 				throw NoSuchKeyFoundException();
 			}
@@ -472,7 +486,7 @@ namespace badgerdb
                                 break;
                         }
                 }
-                if(next == -1){
+                if(next == 0){
 			scanExecuting = false;
                         throw NoSuchKeyFoundException();
                 }
