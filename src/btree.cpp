@@ -187,6 +187,68 @@ namespace badgerdb
 			if (pairToAdd != nullptr)
 			{
 				// check if there is space for the key page pair in the current array
+
+				//there does not need to be an internal node split and the middle value of the old node is being pushed up
+				if(currNode->numKeys + 1 <= INTARRAYNONLEAFSIZE){
+
+					//shifting all values in the key array one to the right
+					for(int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--){
+						currNode->keyArray[i] = currNode->keyArray[i - 1];
+					}
+
+					//shifting all values in the pageNoArray one to the right
+					for(int i = INTARRAYNONLEAFSIZE; i > 0; i--){
+						currNode->pageNoArray[i] = currNode->pageNoArray[i - 1];
+					}
+
+					//pushing middle value to the internal parent
+					currNode->keyArray[0] = pairToAdd->key;
+					currNode->pageNoArray[0] = pairToAdd->pageId;
+				}
+
+				//there is an internal node split
+				else{
+					Page *newPage;
+					PageId newInternalId;
+					this->bufMgr->allocPage(this->file, newInternalId, newPage);
+					NonLeafNodeInt *newInternalNode = reinterpret_cast<NonLeafNodeInt *>(newPage);
+					newInternalNode->numKeys = 0;
+
+					//find where to enter the new key and where to split the node. Has to be where the value before 
+					int whereToSplit = 0;
+					for(int i = 0; i < INTARRAYNONLEAFSIZE; i++){
+						if(pairToAdd->key < currNode->keyArray[i]){
+							whereToSplit = i;
+						}
+					}
+				
+					//if the key being pushed up in the split is either less than everything 
+					//in the full node or greater than everything in the full node
+					if(whereToSplit == 0){
+						newInternalNode->keyArray[0] = pairToAdd->key;
+						newInternalNode->pageNoArray[0] = pairToAdd->pageId;
+					}
+
+					//otherwise, we copy the values for everything greater than the pushed up key
+					//into the new internal sibling node and leave the ones less than the key in the 
+					//original internal node
+					else{
+						for(int i = whereToSplit; i < INTARRAYNONLEAFSIZE; i++){
+							newInternalNode->keyArray[(i - whereToSplit) + 1] = currNode->keyArray[i];
+							currNode->numKeys--;
+							newInternalNode->numKeys++;
+						}
+
+						//same thing but for pageNoArray, since it has different dimensions
+						for(int i = whereToSplit; i < INTARRAYNONLEAFSIZE + 1; i++){
+							newInternalNode->pageNoArray[(i - whereToSplit) + 1] = currNode->pageNoArray[i];
+						}
+
+						newInternalNode->keyArray[0] = pairToAdd->key;
+						newInternalNode->pageNoArray[0] = pairToAdd->pageId;
+					}
+
+				}
 			}
 		}
 		else // insert into leaf
@@ -242,7 +304,7 @@ namespace badgerdb
 				newSibNode->numKeys = 0;
 
 				// copy contents of old array into new array
-				for (int i = INTARRAYLEAFSIZE / 2; i < INTARRAYLEAFSIZE)
+				for (int i = INTARRAYLEAFSIZE / 2; i < INTARRAYLEAFSIZE; i++)
 				{
 					newSibNode->keyArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->keyArray[i];
 					newSibNode->ridArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->ridArray[i];
