@@ -243,21 +243,28 @@ namespace badgerdb
 				// there is an internal node split
 				else
 				{
+					// new page to create
 					Page *newPage;
 					PageId newInternalId;
 					this->bufMgr->allocPage(this->file, newInternalId, newPage);
 					NonLeafNodeInt *newInternalNode = reinterpret_cast<NonLeafNodeInt *>(newPage);
 
+					// fill the arrays
 					std::fill(newInternalNode->keyArray, newInternalNode->keyArray + nodeOccupancy, INT_MAX);
 					std::fill(newInternalNode->pageNoArray, newInternalNode->pageNoArray + nodeOccupancy, 0);
+
+					// maintain the level of the pred
 					newInternalNode->level = currNode->level;
 
+					// create pair to send up to the new node
+					// PUSH key
 					KeyPagePair newPair;
 					newPair.pageId = newInternalId;
 					newPair.key = currNode->keyArray[(nodeOccupancy) / 2];
 					currNode->keyArray[(nodeOccupancy) / 2] = INT_MAX;
 
 					int j = 0;
+					// copy values from the arrays up to occupancy < 2
 					for (int i = nodeOccupancy / 2 + 1; i < nodeOccupancy; i++)
 					{
 						newInternalNode->pageNoArray[j] = currNode->pageNoArray[i];
@@ -267,8 +274,12 @@ namespace badgerdb
 						currNode->pageNoArray[i] = 0;
 						currNode->keyArray[i] = INT_MAX;
 					}
+
+					// set the last page Id on the new node
 					newInternalNode->pageNoArray[j] = currNode->pageNoArray[nodeOccupancy];
-					currNode->pageNoArray[nodeOccupancy] = INT_MAX;
+					currNode->pageNoArray[nodeOccupancy] = 0;
+
+					// Insert the new key value pair into the node of choice
 					if (pairToAdd.key < newPair.key)
 					{
 						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, currNode);
