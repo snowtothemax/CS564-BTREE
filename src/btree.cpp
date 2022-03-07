@@ -162,35 +162,33 @@ namespace badgerdb
 	{
 		KeyPagePair toCheck = recursiveInsert(*((int *)key), rid, false, this->rootPageNum);
 
-
-		//there is a root split
-		if(toCheck.pageId){
-			Page* temp;
+		// there is a root split
+		if (toCheck.pageId)
+		{
+			Page *temp;
 			PageId oldRoot = this->rootPageNum;
-                	this->bufMgr->allocPage(this->file, this->rootPageNum, temp);
-			//root node
+			this->bufMgr->allocPage(this->file, this->rootPageNum, temp);
+			// root node
 			NonLeafNodeInt *newRoot;
 			newRoot = reinterpret_cast<NonLeafNodeInt *>(temp);
 
 			newRoot->keyArray[0] = toCheck.key;
 			newRoot->pageNoArray[0] = oldRoot;
 			newRoot->pageNoArray[1] = toCheck.pageId;
-			
+
 			std::fill(newRoot->keyArray, newRoot->keyArray + nodeOccupancy, INT_MAX);
-                        std::fill(newRoot->pageNoArray, newRoot->pageNoArray + nodeOccupancy, 0);
-                        newRoot->level = 0;
+			std::fill(newRoot->pageNoArray, newRoot->pageNoArray + nodeOccupancy, 0);
+			newRoot->level = 0;
 
-                        IndexMetaInfo *header;
-                        bufMgr->readPage(file, headerPageNum, temp);
-                        header = reinterpret_cast<IndexMetaInfo *>(temp);
+			IndexMetaInfo *header;
+			bufMgr->readPage(file, headerPageNum, temp);
+			header = reinterpret_cast<IndexMetaInfo *>(temp);
 
-
-                        bufMgr->unPinPage(file, rootPageNum, true);
-
-                        header->rootPageNo = this->rootPageNum;
-                        bufMgr->unPinPage(file, headerPageNum, true);
 			bufMgr->unPinPage(file, rootPageNum, true);
 
+			header->rootPageNo = this->rootPageNum;
+			bufMgr->unPinPage(file, headerPageNum, true);
+			bufMgr->unPinPage(file, rootPageNum, true);
 		}
 	}
 
@@ -254,7 +252,6 @@ namespace badgerdb
 					std::fill(newInternalNode->pageNoArray, newInternalNode->pageNoArray + nodeOccupancy, 0);
 					newInternalNode->level = currNode->level;
 
-
 					KeyPagePair newPair;
 					newPair.pageId = newInternalId;
 					newPair.key = currNode->keyArray[(nodeOccupancy) / 2];
@@ -272,15 +269,19 @@ namespace badgerdb
 					}
 					newInternalNode->pageNoArray[j] = currNode->pageNoArray[nodeOccupancy];
 					currNode->pageNoArray[nodeOccupancy] = INT_MAX;
-					if(pairToAdd.key < newPair.key){
+					if (pairToAdd.key < newPair.key)
+					{
 						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, currNode);
-					}else{
-						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId,newInternalNode);
+					}
+					else
+					{
+						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, newInternalNode);
 					}
 
 					return newPair;
 				}
-			}return nullPair;
+			}
+			return nullPair;
 		}
 		else // insert into leaf
 		{
@@ -289,9 +290,9 @@ namespace badgerdb
 
 			// check if there is enough space available on the leaf
 			// I.E NO SPLITTING
-			if (currNode->getNumKeys()  < INTARRAYLEAFSIZE)
+			if (currNode->getNumKeys() < INTARRAYLEAFSIZE)
 			{
-				simpleLeafInsert(key,rid, currNode);
+				simpleLeafInsert(key, rid, currNode);
 				return nullPair;
 			}
 			else // SPLITTING TIME BABY
@@ -304,11 +305,15 @@ namespace badgerdb
 				this->bufMgr->allocPage(this->file, sibId, newSibPage);
 				newSibNode = reinterpret_cast<LeafNodeInt *>(newSibPage);
 
+				std::fill(newSibNode->keyArray, newSibNode->keyArray + INTARRAYLEAFSIZE, INT_MAX);
+
 				// copy contents of old array into new array
 				for (int i = INTARRAYLEAFSIZE / 2; i < INTARRAYLEAFSIZE; i++)
 				{
 					newSibNode->keyArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->keyArray[i];
 					newSibNode->ridArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->ridArray[i];
+
+					currNode->keyArray[i] = INT_MAX;
 				}
 
 				// have new sibling point to original nodes neighbor
@@ -318,11 +323,11 @@ namespace badgerdb
 				// now we insert the value as we did before
 				if (newSibNode->keyArray[0] > key) // insert into orig sib
 				{
-					simpleLeafInsert(key,rid, currNode);
+					simpleLeafInsert(key, rid, currNode);
 				}
 				else // insert into new sib
 				{
-					simpleLeafInsert(key,rid, newSibNode);
+					simpleLeafInsert(key, rid, newSibNode);
 				}
 
 				// close both nodes and push up inserted values
@@ -536,54 +541,51 @@ namespace badgerdb
 		this->currentPageNum = -1;
 	}
 
-	void BTreeIndex::simpleLeafInsert(int key, const RecordId rid, LeafNodeInt * currNode)
-        {
-                                int i = 0;
-                                // find where to insert
-                                while (i < currNode->getNumKeys())
-                                {
-                                        if (currNode->keyArray[i] > key)
-                                        {
-                                                // Shift contents of keyarray
-                                                for (int l = currNode->getNumKeys(); l > i; l--)
-                                                {
-                                                        currNode->keyArray[l] = currNode->keyArray[l - 1];
-                                                }
-                                                // shift contents of ridArray
-                                                for (int k = currNode->getNumKeys(); k > i; k--)
-                                                {
-                                                        currNode->ridArray[k] = currNode->ridArray[k - 1];
-                                                }
+	void BTreeIndex::simpleLeafInsert(int key, const RecordId rid, LeafNodeInt *currNode)
+	{
+		int i = 0;
+		// find where to insert
+		while (i < currNode->getNumKeys())
+		{
+			if (currNode->keyArray[i] > key)
+			{
+				// Shift contents of keyarray
+				for (int l = currNode->getNumKeys(); l > i; l--)
+				{
+					currNode->keyArray[l] = currNode->keyArray[l - 1];
+				}
+				// shift contents of ridArray
+				for (int k = currNode->getNumKeys(); k > i; k--)
+				{
+					currNode->ridArray[k] = currNode->ridArray[k - 1];
+				}
 
-                                                // after contents shifted, exit
-                                                break;
-                                        }
-                                        i += 1;
-                                }
+				// after contents shifted, exit
+				break;
+			}
+			i += 1;
+		}
 
-                                // insert key and rid at specified positions
-                                currNode->keyArray[i] = key;
-                                currNode->ridArray[i] = rid;
+		// insert key and rid at specified positions
+		currNode->keyArray[i] = key;
+		currNode->ridArray[i] = rid;
 	}
 
-	  void BTreeIndex::simpleNodeInsert(int key, const PageId pageId, NonLeafNodeInt * currNode)
-        {
-                for (int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--)
-                {
-                        if (key > currNode->keyArray[i-1])
-                        {
-                                currNode->keyArray[i] = key;
-                                currNode->pageNoArray[i+1] = pageId;
-                                return;
-                        }
-                        currNode->keyArray[i] = currNode->keyArray[i - 1];
-                        currNode->pageNoArray[i+1] = currNode->pageNoArray[i];
-                }
+	void BTreeIndex::simpleNodeInsert(int key, const PageId pageId, NonLeafNodeInt *currNode)
+	{
+		for (int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--)
+		{
+			if (key > currNode->keyArray[i - 1])
+			{
+				currNode->keyArray[i] = key;
+				currNode->pageNoArray[i + 1] = pageId;
+				return;
+			}
+			currNode->keyArray[i] = currNode->keyArray[i - 1];
+			currNode->pageNoArray[i + 1] = currNode->pageNoArray[i];
+		}
 		currNode->keyArray[0] = key;
-               	currNode->pageNoArray[1] = pageId;
-
-        }
-
-
+		currNode->pageNoArray[1] = pageId;
+	}
 
 }
