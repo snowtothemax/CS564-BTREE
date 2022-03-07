@@ -272,10 +272,15 @@ namespace badgerdb
 					}
 					newInternalNode->pageNoArray[j] = currNode->pageNoArray[nodeOccupancy];
 					currNode->pageNoArray[nodeOccupancy] = INT_MAX;
+					if(pairToAdd.key < newPair.key){
+						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, currNode);
+					}else{
+						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId,newInternalNode);
+					}
 
 					return newPair;
 				}
-			}
+			}return nullPair;
 		}
 		else // insert into leaf
 		{
