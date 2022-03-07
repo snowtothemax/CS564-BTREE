@@ -69,7 +69,7 @@ namespace badgerdb
 			this->rootPageNum = header->rootPageNo;
 			bufMgr->unPinPage(file, headerPageNum, false);
 		}
-		catch (FileNotFoundException *ex)
+		catch (FileNotFoundException ex)
 		{
 			// no pre-existing index
 			BlobFile indexFile = BlobFile::create(outIndexName);
@@ -128,7 +128,7 @@ namespace badgerdb
 					key = record + attrByteOffset;
 					this->insertEntry(key, rid);
 				}
-				catch (EndOfFileException *x)
+				catch (EndOfFileException x)
 				{
 					break;
 				}
@@ -184,8 +184,6 @@ namespace badgerdb
                         bufMgr->readPage(file, headerPageNum, temp);
                         header = reinterpret_cast<IndexMetaInfo *>(temp);
 
-
-                        bufMgr->unPinPage(file, rootPageNum, true);
 
                         header->rootPageNo = this->rootPageNum;
                         bufMgr->unPinPage(file, headerPageNum, true);
