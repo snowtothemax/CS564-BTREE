@@ -186,7 +186,6 @@ namespace badgerdb
                         header = reinterpret_cast<IndexMetaInfo *>(temp);
 
 
-                        root->pageNoArray[0] = leafNum;
                         bufMgr->unPinPage(file, rootPageNum, true);
 
                         header->rootPageNo = this->rootPageNum;
