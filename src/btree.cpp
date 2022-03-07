@@ -341,8 +341,6 @@ namespace badgerdb
 				return pair;
 			}
 		}
-		// unpin page. HAVE TO MOVE TO BEFORE RETURNS ONCE IMPLEMENTED
-		this->bufMgr->unPinPage(this->file, currPageId, false);
 	}
 
 	// -----------------------------------------------------------------------------
