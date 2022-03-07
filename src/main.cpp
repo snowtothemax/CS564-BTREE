@@ -629,17 +629,17 @@ void manySearchKeyTest()
 		{
 			index.startScan(&low, GTE, &high, LTE);
 		}
-		catch (NoSuchKeyFoundException *ex)
+		catch (NoSuchKeyFoundException &ex)
 		{
-			std::cout < "Test 5 failed: No such key from startScan()" < std::endl;
+			std::cout << "Test 5 failed: No such key from startScan()" << std::endl;
 		}
-		catch (BadScanrangeException *ex)
+		catch (BadScanrangeException &ex)
 		{
-			std::cout < "Test 5 failed: Bad scan range from startScan()" < std::endl;
+			std::cout << "Test 5 failed: Bad scan range from startScan()" << std::endl;
 		}
-		catch (BadOpcodesException *ex)
+		catch (BadOpcodesException &ex)
 		{
-			std::cout < "Test 5 failed: Bad opcodes from startScan()" < std::endl;
+			std::cout << "Test 5 failed: Bad opcodes from startScan()" << std::endl;
 		}
 
 		int count = 0;
@@ -648,15 +648,137 @@ void manySearchKeyTest()
 				RecordId rid;
 				index.scanNext(rid);
 				count += 1;
-			} catch (ScanNotInitializedException *ex) {
-				std::cout < "Test 5 failed: scan was not initialized when it should have been" < std::endl;
-			} catch (IndexScanCompletedException *ex) {
+			} catch (ScanNotInitializedException &ex) {
+				std::cout << "Test 5 failed: scan was not initialized when it should have been" << std::endl;
+			} catch (IndexScanCompletedException &ex) {
 				break;
 			}
 		}
 
 		if (count != 5000) {
-			std::cout < "Test 5 failed: Did not scan the correct number of records" < std::endl;
+			std::cout << "Test 5 failed: Did not scan the correct number of records" << std::endl;
+		}
+
+		deleteRelation();
+	}
+
+	try
+	{
+		File::remove(intIndexName);
+	}
+	catch (const FileNotFoundException &e)
+	{
+	}
+}
+
+void testBuildIndexOnExisting()
+{
+	{
+		std::cout << "Build Index On Existing" << std::endl;
+		std::cout << "------------------------" << std::endl;
+		// Given error test
+
+		try
+		{
+			File::remove(relationName);
+		}
+		catch (const FileNotFoundException &e)
+		{
+		}
+
+		file1 = new PageFile(relationName, true);
+
+		// initialize all of record1.s to keep purify happy
+		memset(record1.s, ' ', sizeof(record1.s));
+		PageId new_page_number;
+		Page new_page = file1->allocatePage(new_page_number);
+
+		// Insert a bunch of tuples into the relation.
+		for (int i = 0; i < 10; i++)
+		{
+			sprintf(record1.s, "%05d string record", i);
+			record1.i = i;
+			record1.d = (double)i;
+			std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
+
+			while (1)
+			{
+				try
+				{
+					new_page.insertRecord(new_data);
+					break;
+				}
+				catch (const InsufficientSpaceException &e)
+				{
+					file1->writePage(new_page_number, new_page);
+					new_page = file1->allocatePage(new_page_number);
+				}
+			}
+		}
+		file1->writePage(new_page_number, new_page);
+
+		BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+
+		BTreeIndex index2(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+
+		int int2 = 2;
+		int int5 = 5;
+
+		// Scan Tests
+		std::cout << "Call endScan before startScan" << std::endl;
+		try
+		{
+			index2.endScan();
+			std::cout << "ScanNotInitialized Test 1 Failed." << std::endl;
+		}
+		catch (const ScanNotInitializedException &e)
+		{
+			std::cout << "ScanNotInitialized Test 1 Passed." << std::endl;
+		}
+
+		std::cout << "Call scanNext before startScan" << std::endl;
+		try
+		{
+			RecordId foo;
+			index2.scanNext(foo);
+			std::cout << "ScanNotInitialized Test 2 Failed." << std::endl;
+		}
+		catch (const ScanNotInitializedException &e)
+		{
+			std::cout << "ScanNotInitialized Test 2 Passed." << std::endl;
+		}
+
+		std::cout << "Scan with bad lowOp" << std::endl;
+		try
+		{
+			index2.startScan(&int2, LTE, &int5, LTE);
+			std::cout << "BadOpcodesException Test 1 Failed." << std::endl;
+		}
+		catch (const BadOpcodesException &e)
+		{
+			std::cout << "BadOpcodesException Test 1 Passed." << std::endl;
+		}
+
+		std::cout << "Scan with bad highOp" << std::endl;
+		try
+		{
+			index2.startScan(&int2, GTE, &int5, GTE);
+			std::cout << "BadOpcodesException Test 2 Failed." << std::endl;
+		}
+		catch (const BadOpcodesException &e)
+		{
+			std::cout << "BadOpcodesException Test 2 Passed." << std::endl;
+		}
+
+		std::cout << "Scan with bad range" << std::endl;
+		try
+		{
+			index2.startScan(&int5, GTE, &int2, LTE);
+			std::cout << "BadScanrangeException Test 1 Failed." << std::endl;
+		}
+		catch (const BadScanrangeException &e)
+		{
+			std::cout << "BadScanrangeException Test 1 Passed." << std::endl;
 		}
 
 		deleteRelation();
