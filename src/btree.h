@@ -375,7 +375,7 @@ namespace badgerdb
      * @param currPage
      * @return KeyPagePair - KeyPagePair in which to push up
      */
-    KeyPagePair *recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage);
+    KeyPagePair recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage);
 
         /**
          * Begin a filtered scan of the index.  For instance, if the method is called

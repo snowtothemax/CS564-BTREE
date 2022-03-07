@@ -98,7 +98,6 @@ namespace badgerdb
 
 			leaf = reinterpret_cast<LeafNodeInt *>(temp);
 			std::fill(leaf->keyArray, leaf->keyArray + nodeOccupancy, INT_MAX);
-			std::fill(leaf->ridArray, leaf->ridArray + leafOccupancy, 0);
 			leaf->rightSibPageNo = 0;
 
 			root->pageNoArray[0] = leafNum;
@@ -165,7 +164,7 @@ namespace badgerdb
 
 
 		//there is a root split
-		if(toCheck != nullptr){
+		if(toCheck.pageId){
 			Page* temp;
 			PageId oldRoot = this->rootPageNum;
                 	this->bufMgr->allocPage(this->file, this->rootPageNum, temp);
@@ -177,9 +176,9 @@ namespace badgerdb
 			newRoot->pageNoArray[0] = oldRoot;
 			newRoot->pageNoArray[1] = toCheck.pageId;
 			
-			std::fill(root->keyArray, root->keyArray + nodeOccupancy, INT_MAX);
-                        std::fill(root->pageNoArray, root->pageNoArray + nodeOccupancy, 0);
-                        root->level = 0;
+			std::fill(newRoot->keyArray, newRoot->keyArray + nodeOccupancy, INT_MAX);
+                        std::fill(newRoot->pageNoArray, newRoot->pageNoArray + nodeOccupancy, 0);
+                        newRoot->level = 0;
 
                         IndexMetaInfo *header;
                         bufMgr->readPage(file, headerPageNum, temp);
@@ -190,7 +189,7 @@ namespace badgerdb
 
                         header->rootPageNo = this->rootPageNum;
                         bufMgr->unPinPage(file, headerPageNum, true);
-			bufMgr->unPinPage(file, rootPageNo, true);
+			bufMgr->unPinPage(file, rootPageNum, true);
 
 		}
 	}
@@ -199,8 +198,10 @@ namespace badgerdb
 	// Recursicve insert
 	// Returns a KeyPagePair to push up when splitting
 	// ------------------------------------------------------------------------------
-	KeyPagePair *BTreeIndex::recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPageId)
+	KeyPagePair BTreeIndex::recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPageId)
 	{
+		KeyPagePair nullPair;
+		nullPair.pageId = 0;
 		// get the page
 		Page *temp;
 		this->bufMgr->readPage(this->file, currPageId, temp);
@@ -229,16 +230,16 @@ namespace badgerdb
 			}
 
 			// recursive call. check if splitting has occurred
-			KeyPagePair *pairToAdd = recursiveInsert(key, rid, isNextLeaf, currNode->pageNoArray[index]);
-			if (pairToAdd != nullptr)
+			KeyPagePair pairToAdd = recursiveInsert(key, rid, isNextLeaf, currNode->pageNoArray[index]);
+			if (pairToAdd.pageId)
 			{
 				// check if there is space for the key page pair in the current array
 
 				// there does not need to be an internal node split and the middle value of the old node is being pushed up
 				if (currNode->getNumKeys() < nodeOccupancy)
 				{
-					simpleNodeInsert(pairToAdd->key, pairToAdd->pageId, currNode);
-					return nullptr;
+					simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, currNode);
+					return nullPair;
 				}
 
 				// there is an internal node split
@@ -286,7 +287,7 @@ namespace badgerdb
 			if (currNode->getNumKeys()  < INTARRAYLEAFSIZE)
 			{
 				simpleLeafInsert(key,rid, currNode);
-				return nullptr;
+				return nullPair;
 			}
 			else // SPLITTING TIME BABY
 			{
@@ -320,9 +321,9 @@ namespace badgerdb
 				}
 
 				// close both nodes and push up inserted values
-				KeyPagePair *pair;
-				pair->key = newSibNode->keyArray[0];
-				pair->pageId = sibId;
+				KeyPagePair pair;
+				pair.key = newSibNode->keyArray[0];
+				pair.pageId = sibId;
 
 				// unpinPages
 				this->bufMgr->unPinPage(this->file, currPageId, true);
@@ -331,7 +332,6 @@ namespace badgerdb
 				return pair;
 			}
 		}
-
 		// unpin page. HAVE TO MOVE TO BEFORE RETURNS ONCE IMPLEMENTED
 		this->bufMgr->unPinPage(this->file, currPageId, false);
 	}
