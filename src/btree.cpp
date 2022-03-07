@@ -206,19 +206,7 @@ namespace badgerdb
 				// there does not need to be an internal node split and the middle value of the old node is being pushed up
 				if (currNode->getNumKeys() < nodeOccupancy)
 				{
-
-					// shifting all values in the key array one to the right
-					for (int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--)
-					{
-						if (pairToAdd->key > currNode->keyArray[i])
-						{
-							currNode->keyArray[i] = pairToAdd->key;
-							currNode->pageNoArray[i] = pairToAdd->pageId;
-							break;
-						}
-						currNode->keyArray[i] = currNode->keyArray[i - 1];
-						currNode->pageNoArray[i] = currNode->pageNoArray[i - 1];
-					}
+					simpleNodeInsert(pairToAdd->key, pairToAdd->pageId, currNode);
 					return nullptr;
 				}
 
@@ -541,5 +529,25 @@ namespace badgerdb
                                 currNode->keyArray[i] = key;
                                 currNode->ridArray[i] = rid;
 	}
+
+	  void BTreeIndex::simpleNodeInsert(int key, const PageId pageId, NonLeafNodeInt * currNode)
+        {
+                for (int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--)
+                {
+                        if (key > currNode->keyArray[i-1])
+                        {
+                                currNode->keyArray[i] = key;
+                                currNode->pageNoArray[i+1] = pageId;
+                                return;
+                        }
+                        currNode->keyArray[i] = currNode->keyArray[i - 1];
+                        currNode->pageNoArray[i+1] = currNode->pageNoArray[i];
+                }
+		currNode->keyArray[0] = key;
+               	currNode->pageNoArray[1] = pageId;
+
+        }
+
+
 
 }

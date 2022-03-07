@@ -329,6 +329,9 @@ namespace badgerdb
 
     void simpleLeafInsert(int key, const RecordId rid, LeafNodeInt * currNode);
 
+     void simpleNodeInsert(int key, const PageId pageId, NonLeafNodeInt * currNode);
+
+
   public:
     /**
      * BTreeIndex Constructor.
