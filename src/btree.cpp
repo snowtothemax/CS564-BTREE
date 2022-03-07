@@ -161,7 +161,39 @@ namespace badgerdb
 
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
-		recursiveInsert(*((int *)key), rid, false, this->rootPageNum);
+		KeyPagePair toCheck = recursiveInsert(*((int *)key), rid, false, this->rootPageNum);
+
+
+		//there is a root split
+		if(toCheck != nullptr){
+			Page* temp;
+			PageId oldRoot = this->rootPageNum;
+                	this->bufMgr->allocPage(this->file, this->rootPageNum, temp);
+			//root node
+			NonLeafNodeInt *newRoot;
+			newRoot = reinterpret_cast<NonLeafNodeInt *>(temp);
+
+			newRoot->keyArray[0] = toCheck.key;
+			newRoot->pageNoArray[0] = oldRoot;
+			newRoot->pageNoArray[1] = toCheck.pageId;
+			
+			std::fill(root->keyArray, root->keyArray + nodeOccupancy, INT_MAX);
+                        std::fill(root->pageNoArray, root->pageNoArray + nodeOccupancy, 0);
+                        root->level = 0;
+
+                        IndexMetaInfo *header;
+                        bufMgr->readPage(file, headerPageNum, temp);
+                        header = reinterpret_cast<IndexMetaInfo *>(temp);
+
+
+                        root->pageNoArray[0] = leafNum;
+                        bufMgr->unPinPage(file, rootPageNum, true);
+
+                        header->rootPageNo = this->rootPageNum;
+                        bufMgr->unPinPage(file, headerPageNum, true);
+			bufMgr->unPinPage(file, rootPageNo, true);
+
+		}
 	}
 
 	// ------------------------------------------------------------------------------
