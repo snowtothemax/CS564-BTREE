@@ -740,6 +740,13 @@ void testBuildIndexOnExisting()
 
 void largeSizeRelation()
 {
+	  try
+        {
+                File::remove("big.0");
+        }
+        catch (const FileNotFoundException &e)
+        {
+        }
 
 	{
 		std::cout << "Large Size Relation General Tests" << std::endl;
@@ -812,7 +819,7 @@ void largeSizeRelation()
                 // run some tests
 		file1 = file2;
                 checkPassFail(intScan(&index, -1000, GTE, 2000000, LTE), 1000000)
-                checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+                checkPassFail(intScan(&index, 250000, GT, 400000, LT), 149999)
                 checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
                         checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
                                 checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
@@ -825,7 +832,7 @@ void largeSizeRelation()
                 delete file2;
         }
 	}
-	 try
+	  try
         {
                 File::remove("big.0");
         }
