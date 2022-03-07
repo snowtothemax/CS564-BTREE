@@ -458,7 +458,7 @@ namespace badgerdb
 				if (currLeaf->keyArray[i] > ub)
 				{
 					scanExecuting = false;
-					bufMgr->unPinPage(file, currentPageNum, false);
+					bufMgr->unPinPage(file, currNo, false);
 					throw NoSuchKeyFoundException();
 				}
 				if (currLeaf->keyArray[i] >= lb)
@@ -480,7 +480,7 @@ namespace badgerdb
 			if (currLeaf->keyArray[i] > ub)
 			{
 				scanExecuting = false;
-				bufMgr->unPinPage(file, currentPageNum, false);
+				bufMgr->unPinPage(file, currNo, false);
 				throw NoSuchKeyFoundException();
 			}
 			if (currLeaf->keyArray[i] >= lb)
@@ -492,7 +492,7 @@ namespace badgerdb
 			}
 		}
 		scanExecuting = false;
-		bufMgr->unPinPage(file, currentPageNum, false);
+		bufMgr->unPinPage(file, currNo, false);
 		throw NoSuchKeyFoundException();
 	}
 
