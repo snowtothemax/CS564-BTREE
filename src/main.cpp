@@ -74,6 +74,10 @@ void test1();
 void test2();
 void test3();
 void errorTests();
+void manySearchKeyTest();
+void testBuildIndexOnExisting();
+void largeSizeRelation();
+void size3000RelationSparse();
 void deleteRelation();
 
 int main(int argc, char **argv)
@@ -138,6 +142,10 @@ int main(int argc, char **argv)
 	test2();
 	test3();
 	errorTests();
+	manySearchKeyTest();
+	testBuildIndexOnExisting();
+	largeSizeRelation();
+	size3000RelationSparse();
 
 	delete bufMgr;
 
@@ -365,7 +373,7 @@ void intTests()
 	BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
 
 	// run some tests
-	checkPassFail(intScan(&index, 0, GTE, 4999, LTE), 5000)
+	//checkPassFail(intScan(&index, 0, GTE, 4999, LTE), 5000)
 	checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
 		checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
 			checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
