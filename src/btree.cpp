@@ -511,6 +511,8 @@ namespace badgerdb
 			throw IndexScanCompletedException();
 		}
 		LeafNodeInt *currLeaf = reinterpret_cast<LeafNodeInt *>(currentPageData);
+
+
 		outRid = currLeaf->ridArray[nextEntry];
 		nextEntry = (nextEntry + 1) % leafOccupancy;
 
@@ -538,6 +540,7 @@ namespace badgerdb
 			currLeaf = reinterpret_cast<LeafNodeInt *>(currentPageData);
 
 		}
+
 		if (currLeaf->keyArray[nextEntry] > ub)
                         {
                                 bufMgr->unPinPage(file, currentPageNum, false);
@@ -568,17 +571,18 @@ namespace badgerdb
 	{
 		int i = 0;
 		// find where to insert
-		while (i < currNode->getNumKeys())
+		int size = currNode->getNumKeys();
+		while (i < size)
 		{
 			if (currNode->keyArray[i] > key)
 			{
 				// Shift contents of keyarray
-				for (int l = currNode->getNumKeys(); l > i; l--)
+				for (int l = size; l > i; l--)
 				{
 					currNode->keyArray[l] = currNode->keyArray[l - 1];
 				}
 				// shift contents of ridArray
-				for (int k = currNode->getNumKeys(); k > i; k--)
+				for (int k = size; k > i; k--)
 				{
 					currNode->ridArray[k] = currNode->ridArray[k - 1];
 				}
@@ -596,7 +600,7 @@ namespace badgerdb
 
 	void BTreeIndex::simpleNodeInsert(int key, const PageId pageId, NonLeafNodeInt *currNode)
 	{
-		for (int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--)
+		for (int i =currNode->getNumKeys(); i > 0; i--)
 		{
 			if (key > currNode->keyArray[i - 1])
 			{
