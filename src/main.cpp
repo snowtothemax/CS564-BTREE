@@ -429,8 +429,9 @@ int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator
 			bufMgr->readPage(file1, scanRid.page_number, curPage);
 			RECORD myRec = *(reinterpret_cast<const RECORD *>(curPage->getRecord(scanRid).data()));
 			bufMgr->unPinPage(file1, scanRid.page_number, false);
+			
 
-			if (numResults < 5)
+			if (numResults < 5) 
 			{
 				std::cout << "at:" << scanRid.page_number << "," << scanRid.slot_number;
 				std::cout << " -->:" << myRec.i << ":" << myRec.d << ":" << myRec.s << ":" << std::endl;
@@ -690,109 +691,147 @@ void manySearchKeyTest()
 
 void testBuildIndexOnExisting()
 {
+	std::cout << "---------------------" << std::endl;
+        std::cout << "createRelationForward" << std::endl;
+        createRelationForward();
+	 {
+                std::cout << "Build Index New" << std::endl;
+                std::cout << "------------------------" << std::endl;
+                // Given error test
+
+                BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+
+                // run some tests
+                checkPassFail(intScan(&index, -1000, GTE, 6000, LTE), 5000)
+                checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+                checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
+                        checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+                                checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+                                        checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
+                                                checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
+                                                        checkPassFail(intScan(&index, 3000, GTE, 4000, LT), 1000)
+        }
 	{
 		std::cout << "Build Index On Existing" << std::endl;
 		std::cout << "------------------------" << std::endl;
 		// Given error test
 
-		try
-		{
-			File::remove(relationName);
-		}
-		catch (const FileNotFoundException &e)
-		{
-		}
-
-		file1 = new PageFile(relationName, true);
-
-		// initialize all of record1.s to keep purify happy
-		memset(record1.s, ' ', sizeof(record1.s));
-		PageId new_page_number;
-		Page new_page = file1->allocatePage(new_page_number);
-
-		// Insert a bunch of tuples into the relation.
-		for (int i = 0; i < 10; i++)
-		{
-			sprintf(record1.s, "%05d string record", i);
-			record1.i = i;
-			record1.d = (double)i;
-			std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
-
-			while (1)
-			{
-				try
-				{
-					new_page.insertRecord(new_data);
-					break;
-				}
-				catch (const InsufficientSpaceException &e)
-				{
-					file1->writePage(new_page_number, new_page);
-					new_page = file1->allocatePage(new_page_number);
-				}
-			}
-		}
-		file1->writePage(new_page_number, new_page);
-
-		// create an index
 		BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
 
-		// create index again and run tests
-		indexTests();
-		deleteRelation();
+        	// run some tests
+        	checkPassFail(intScan(&index, -1000, GTE, 6000, LTE), 5000)
+        	checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+                checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
+                        checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+                                checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+                                        checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
+                                                checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
+                                                        checkPassFail(intScan(&index, 3000, GTE, 4000, LT), 1000)
 	}
+		deleteRelation();
+		try
+        {
+                File::remove(intIndexName);
+        }
+        catch (const FileNotFoundException &e)
+        {
+        }
 }
 
 void largeSizeRelation()
 {
+
 	{
 		std::cout << "Large Size Relation General Tests" << std::endl;
 		std::cout << "------------------------" << std::endl;
-		// Given error test
+		
 
-		try
-		{
-			File::remove(relationName);
-		}
-		catch (const FileNotFoundException &e)
-		{
-		}
+		 // destroy any old copies of relation file
+		 int bigSize = 1000000;
+		 PageFile* file2;
+        try
+        {
+        file2 = new PageFile("big",false);
+        }
+        catch (const FileNotFoundException &e)
+        {
+		 file2 = new PageFile("big",true);
 
-		file1 = new PageFile(relationName, true);
+        // initialize all of record1.s to keep purify happy
+        memset(record1.s, ' ', sizeof(record1.s));
+        PageId new_page_number;
+        Page new_page = file2->allocatePage(new_page_number);
 
-		// initialize all of record1.s to keep purify happy
-		memset(record1.s, ' ', sizeof(record1.s));
-		PageId new_page_number;
-		Page new_page = file1->allocatePage(new_page_number);
+        // insert records in random order
 
-		// Insert 5000 tuples
-		for (int i = 0; i < 5000; i++)
-		{
-			sprintf(record1.s, "%05d string record", i);
-			record1.i = i;
-			record1.d = (double)i;
-			std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
+        std::vector<int> intvec(bigSize);
+        for (int i = 0; i < bigSize; i++)
+        {
+                intvec[i] = i;
+        }
 
-			while (1)
-			{
-				try
-				{
-					new_page.insertRecord(new_data);
-					break;
-				}
-				catch (const InsufficientSpaceException &e)
-				{
-					file1->writePage(new_page_number, new_page);
-					new_page = file1->allocatePage(new_page_number);
-				}
-			}
-		}
-		file1->writePage(new_page_number, new_page);
+        long pos;
+        int val;
+        int i = 0;
+        while (i < bigSize)
+        {
+                pos = random() % (bigSize - i);
+                val = intvec[pos];
+                sprintf(record1.s, "%05d string record", val);
+                record1.i = val;
+                record1.d = val;
 
-		// run tests on index
-		indexTests();
-		deleteRelation();
+                std::string new_data(reinterpret_cast<char *>(&record1), sizeof(RECORD));
+
+                while (1)
+                {
+                        try
+                        {
+                                new_page.insertRecord(new_data);
+                                break;
+                        }
+                        catch (const InsufficientSpaceException &e)
+                        {
+                                file2->writePage(new_page_number, new_page);
+                                new_page = file2->allocatePage(new_page_number);
+                        }
+                }
+
+                int temp = intvec[bigSize - 1 - i];
+                intvec[bigSize - 1 - i] = intvec[pos];
+                intvec[pos] = temp;
+                i++;
+        }
+
+        file2->writePage(new_page_number, new_page);
+        }
+
+		 BTreeIndex index("big", intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+	std::cout<<"\n----------------\nConstructed and running scans\n-----------------\n";
+
+                // run some tests
+		file1 = file2;
+                checkPassFail(intScan(&index, -1000, GTE, 2000000, LTE), 1000000)
+                checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
+                checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
+                        checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
+                                checkPassFail(intScan(&index, 996, GT, 1001, LT), 4)
+                                        checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
+                                                checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
+						 checkPassFail(intScan(&index, 3000, GTE, 4000, LT), 1000)
+          if (file2)
+        {
+                bufMgr->flushFile(file2);
+                delete file2;
+        }
 	}
+	 try
+        {
+                File::remove("big.0");
+        }
+        catch (const FileNotFoundException &e)
+        {
+        }
 }
 
 void size3000RelationSparse()
@@ -854,11 +893,21 @@ void size3000RelationSparse()
 		intvec[pos] = temp;
 		i++;
 	}
-
+	{
 	file1->writePage(new_page_number, new_page);
+	BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
 
-	indexTests();
+                // run some tests
+                checkPassFail(intScan(&index, -1000, GTE, 6000, LTE), 3000)
 	deleteRelation();
+	}
+		try
+        {
+                File::remove(intIndexName);
+        }
+        catch (const FileNotFoundException &e)
+        {
+        }
 }
 
 void deleteRelation()

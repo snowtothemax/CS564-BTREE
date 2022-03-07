@@ -281,7 +281,6 @@ namespace badgerdb
      * Page number of current page being scanned.
      */
     PageId currentPageNum;
-
     /**
      * Current Page being scanned.
      */

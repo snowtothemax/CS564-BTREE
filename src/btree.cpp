@@ -63,7 +63,6 @@ namespace badgerdb
 			{
 				throw BadIndexInfoException("Invalid index was found!");
 			}
-
 			// update root
 			this->rootPageNum = header->rootPageNo;
 			bufMgr->unPinPage(file, headerPageNum, false);
@@ -105,11 +104,13 @@ namespace badgerdb
 			bufMgr->unPinPage(file, leafNum, true);
 
 			// fill header info
+
 			relationName.copy(header->relationName, 20);
 			header->attrByteOffset = attrByteOffset;
 			header->attrType = attrType;
 			header->rootPageNo = this->rootPageNum;
 			bufMgr->unPinPage(file, headerPageNum, true);
+
 
 			// populate index
 			FileScan scanner(relationName, bufMgr);
@@ -171,23 +172,25 @@ namespace badgerdb
 			NonLeafNodeInt *newRoot;
 			newRoot = reinterpret_cast<NonLeafNodeInt *>(temp);
 
-			newRoot->keyArray[0] = toCheck.key;
-			newRoot->pageNoArray[0] = oldRoot;
-			newRoot->pageNoArray[1] = toCheck.pageId;
 
 			std::fill(newRoot->keyArray, newRoot->keyArray + nodeOccupancy, INT_MAX);
 			std::fill(newRoot->pageNoArray, newRoot->pageNoArray + nodeOccupancy, 0);
 			newRoot->level = 0;
 
+
+			newRoot->keyArray[0] = toCheck.key;
+			newRoot->pageNoArray[0] = oldRoot;
+			newRoot->pageNoArray[1] = toCheck.pageId;
+
 			IndexMetaInfo *header;
 			bufMgr->readPage(file, headerPageNum, temp);
 			header = reinterpret_cast<IndexMetaInfo *>(temp);
 
-			bufMgr->unPinPage(file, rootPageNum, true);
 
 			header->rootPageNo = this->rootPageNum;
 			bufMgr->unPinPage(file, headerPageNum, true);
 			bufMgr->unPinPage(file, rootPageNum, true);
+
 		}
 	}
 
