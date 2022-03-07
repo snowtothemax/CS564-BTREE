@@ -718,68 +718,15 @@ void testBuildIndexOnExisting()
 		file1->writePage(new_page_number, new_page);
 
 		BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
-
 		BTreeIndex index2(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
 
-		int int2 = 2;
-		int int5 = 5;
-
-		// Scan Tests
-		std::cout << "Call endScan before startScan" << std::endl;
-		try
-		{
-			index2.endScan();
-			std::cout << "ScanNotInitialized Test 1 Failed." << std::endl;
-		}
-		catch (const ScanNotInitializedException &e)
-		{
-			std::cout << "ScanNotInitialized Test 1 Passed." << std::endl;
-		}
-
-		std::cout << "Call scanNext before startScan" << std::endl;
-		try
-		{
-			RecordId foo;
-			index2.scanNext(foo);
-			std::cout << "ScanNotInitialized Test 2 Failed." << std::endl;
-		}
-		catch (const ScanNotInitializedException &e)
-		{
-			std::cout << "ScanNotInitialized Test 2 Passed." << std::endl;
-		}
-
-		std::cout << "Scan with bad lowOp" << std::endl;
-		try
-		{
-			index2.startScan(&int2, LTE, &int5, LTE);
-			std::cout << "BadOpcodesException Test 1 Failed." << std::endl;
-		}
-		catch (const BadOpcodesException &e)
-		{
-			std::cout << "BadOpcodesException Test 1 Passed." << std::endl;
-		}
-
-		std::cout << "Scan with bad highOp" << std::endl;
-		try
-		{
-			index2.startScan(&int2, GTE, &int5, GTE);
-			std::cout << "BadOpcodesException Test 2 Failed." << std::endl;
-		}
-		catch (const BadOpcodesException &e)
-		{
-			std::cout << "BadOpcodesException Test 2 Passed." << std::endl;
-		}
-
-		std::cout << "Scan with bad range" << std::endl;
-		try
-		{
-			index2.startScan(&int5, GTE, &int2, LTE);
-			std::cout << "BadScanrangeException Test 1 Failed." << std::endl;
-		}
-		catch (const BadScanrangeException &e)
-		{
-			std::cout << "BadScanrangeException Test 1 Passed." << std::endl;
-		}
+		checkPassFail(intScan(&index2, 25, GT, 40, LT), 14)
+		checkPassFail(intScan(&index2, 20, GTE, 35, LTE), 16)
+			checkPassFail(intScan(&index2, -3, GT, 3, LT), 3)
+				checkPassFail(intScan(&index2, 996, GT, 1001, LT), 4)
+					checkPassFail(intScan(&index2, 0, GT, 1, LT), 0)
+						checkPassFail(intScan(&index2, 300, GT, 400, LT), 99)
+							checkPassFail(intScan(&index2, 3000, GTE, 4000, LT), 1000)
 
 		deleteRelation();
 	}
