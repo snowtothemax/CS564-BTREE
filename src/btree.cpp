@@ -295,6 +295,8 @@ namespace badgerdb
 					return newPair;
 				}
 			}
+
+			this->bufMgr->unPinPage(this->file, currPageId, true);
 			return nullPair;
 		}
 		else // insert into leaf
