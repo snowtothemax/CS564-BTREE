@@ -492,7 +492,6 @@ namespace badgerdb
 			throw IndexScanCompletedException();
 		}
 		LeafNodeInt *currLeaf = reinterpret_cast<LeafNodeInt *>(currentPageData);
-		std::cout <<currLeaf->rightSibPageNo<<", "<<nextEntry<<std::endl;
 		outRid = currLeaf->ridArray[nextEntry];
 		nextEntry = (nextEntry + 1) % leafOccupancy;
 
@@ -501,7 +500,9 @@ namespace badgerdb
                 {
                         ub--;
                 }
-
+		if(currLeaf->keyArray[nextEntry] == INT_MAX){
+			nextEntry = 0;
+		}
 
 		if (nextEntry == 0)
 		{
@@ -511,7 +512,6 @@ namespace badgerdb
 				nextEntry = -1;
 				return;
 			}
-			std::cout << "HERERE"<< std::endl;
 			PageId next = currLeaf->rightSibPageNo;
 			bufMgr->unPinPage(file, currentPageNum, false);
 			currentPageNum = next;
