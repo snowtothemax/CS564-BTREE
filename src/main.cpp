@@ -643,19 +643,26 @@ void manySearchKeyTest()
 		}
 
 		int count = 0;
-		while(1) {
-			try {
+		while (1)
+		{
+			try
+			{
 				RecordId rid;
 				index.scanNext(rid);
 				count += 1;
-			} catch (ScanNotInitializedException &ex) {
+			}
+			catch (ScanNotInitializedException &ex)
+			{
 				std::cout << "Test 5 failed: scan was not initialized when it should have been" << std::endl;
-			} catch (IndexScanCompletedException &ex) {
+			}
+			catch (IndexScanCompletedException &ex)
+			{
 				break;
 			}
 		}
 
-		if (count != 5000) {
+		if (count != 5000)
+		{
 			std::cout << "Test 5 failed: Did not scan the correct number of records" << std::endl;
 		}
 
@@ -717,27 +724,131 @@ void testBuildIndexOnExisting()
 		}
 		file1->writePage(new_page_number, new_page);
 
+		// create an index
 		BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
-		BTreeIndex index2(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
 
-		checkPassFail(intScan(&index2, 25, GT, 40, LT), 14)
-		checkPassFail(intScan(&index2, 20, GTE, 35, LTE), 16)
-			checkPassFail(intScan(&index2, -3, GT, 3, LT), 3)
-				checkPassFail(intScan(&index2, 996, GT, 1001, LT), 4)
-					checkPassFail(intScan(&index2, 0, GT, 1, LT), 0)
-						checkPassFail(intScan(&index2, 300, GT, 400, LT), 99)
-							checkPassFail(intScan(&index2, 3000, GTE, 4000, LT), 1000)
-
+		// create index again and run tests
+		indexTests();
 		deleteRelation();
 	}
+}
+
+void largeSizeRelation()
+{
+	{
+		std::cout << "Large Size Relation General Tests" << std::endl;
+		std::cout << "------------------------" << std::endl;
+		// Given error test
+
+		try
+		{
+			File::remove(relationName);
+		}
+		catch (const FileNotFoundException &e)
+		{
+		}
+
+		file1 = new PageFile(relationName, true);
+
+		// initialize all of record1.s to keep purify happy
+		memset(record1.s, ' ', sizeof(record1.s));
+		PageId new_page_number;
+		Page new_page = file1->allocatePage(new_page_number);
+
+		// Insert 5000 tuples
+		for (int i = 0; i < 5000; i++)
+		{
+			sprintf(record1.s, "%05d string record", i);
+			record1.i = i;
+			record1.d = (double)i;
+			std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
+
+			while (1)
+			{
+				try
+				{
+					new_page.insertRecord(new_data);
+					break;
+				}
+				catch (const InsufficientSpaceException &e)
+				{
+					file1->writePage(new_page_number, new_page);
+					new_page = file1->allocatePage(new_page_number);
+				}
+			}
+		}
+		file1->writePage(new_page_number, new_page);
+
+		// run tests on index
+		indexTests();
+		deleteRelation();
+	}
+}
+
+void size3000RelationSparse()
+{
+	std::cout << "Large Relation Sparse" << std::endl;
+	std::cout << "---------------------" << std::endl;
+	// Given error test
 
 	try
 	{
-		File::remove(intIndexName);
+		File::remove(relationName);
 	}
 	catch (const FileNotFoundException &e)
 	{
 	}
+
+	file1 = new PageFile(relationName, true);
+
+	// initialize all of record1.s to keep purify happy
+	memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+	Page new_page = file1->allocatePage(new_page_number);
+
+	std::vector<int> intvec(relationSize);
+	for (int i = 0; i < relationSize; i++)
+	{
+		intvec[i] = i;
+	}
+
+	long pos;
+	int val;
+	int i = 0;
+	while (i < 3000)
+	{
+		pos = random() % (relationSize - i);
+		val = intvec[pos];
+		sprintf(record1.s, "%05d string record", val);
+		record1.i = val;
+		record1.d = val;
+
+		std::string new_data(reinterpret_cast<char *>(&record1), sizeof(RECORD));
+
+		while (1)
+		{
+			try
+			{
+				new_page.insertRecord(new_data);
+				break;
+			}
+			catch (const InsufficientSpaceException &e)
+			{
+				file1->writePage(new_page_number, new_page);
+				new_page = file1->allocatePage(new_page_number);
+			}
+		}
+
+		int temp = intvec[relationSize - 1 - i];
+		intvec[relationSize - 1 - i] = intvec[pos];
+		intvec[pos] = temp;
+		i++;
+	}
+
+	file1->writePage(new_page_number, new_page);
+
+	indexTests();
+	deleteRelation();
 }
 
 void deleteRelation()
