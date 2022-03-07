@@ -534,15 +534,17 @@ namespace badgerdb
         {
                 for (int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--)
                 {
-                        if (key > currNode->keyArray[i])
+                        if (key > currNode->keyArray[i-1])
                         {
                                 currNode->keyArray[i] = key;
-                                currNode->pageNoArray[i] = pageId;
-                                break;
+                                currNode->pageNoArray[i+1] = pageId;
+                                return;
                         }
                         currNode->keyArray[i] = currNode->keyArray[i - 1];
-                        currNode->pageNoArray[i] = currNode->pageNoArray[i - 1];
+                        currNode->pageNoArray[i+1] = currNode->pageNoArray[i];
                 }
+		currNode->keyArray[0] = key;
+               	currNode->pageNoArray[1] = pageId;
 
         }
 
