@@ -15,11 +15,8 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
-<<<<<<< HEAD
-=======
 #include "exceptions/page_pinned_exception.h"
 #include <climits>
->>>>>>> 21bed4af5066ac5bb34ca1deffdb498a7f624f7a
 
 //#define DEBUG
 
@@ -165,7 +162,24 @@ namespace badgerdb
 
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
-		recursiveInsert(*((int *)key), rid, false, this->rootPageNum);
+		KeyPagePair toCheck = recursiveInsert(*((int *)key), rid, false, this->rootPageNum);
+
+		// get the page
+		Page *temp;
+		this->bufMgr->readPage(this->file, this->rootPageNum, temp);
+
+		//there is a root split
+		if(toCheck != nullptr){
+
+			//root node
+			NonLeafNodeInt *newRoot;
+			newRoot = reinterpret_cast<NonLeafNodeInt *>(temp);
+
+			newRoot->keyArray[0] = toCheck->key;
+			newRoot->pageNoArray[0] = toCheck->pageId;
+			newRoot->numKeys = 1;
+			newRoot->rootPageNum = toCheck->pageId;
+		}
 	}
 
 	// ------------------------------------------------------------------------------
