@@ -208,21 +208,20 @@ namespace badgerdb
 				// check if there is space for the key page pair in the current array
 
 				//there does not need to be an internal node split and the middle value of the old node is being pushed up
-				if(currNode->numKeys + 1 <= INTARRAYNONLEAFSIZE){
+				if(currNode->numKeys < nodeOccupancy){
 
 					//shifting all values in the key array one to the right
 					for(int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--){
-						currNode->keyArray[i] = currNode->keyArray[i - 1];
-					}
+						if (pairToAdd -> key > currNode->keyArray[i]){
+							currNode->keyArray[i] = pairToAdd->key;
+                                        		currNode->pageNoArray[i] = pairToAdd->pageId;
+							break;
 
-					//shifting all values in the pageNoArray one to the right
-					for(int i = INTARRAYNONLEAFSIZE; i > 0; i--){
+						}
+						currNode->keyArray[i] = currNode->keyArray[i - 1];
 						currNode->pageNoArray[i] = currNode->pageNoArray[i - 1];
 					}
-
-					//pushing middle value to the internal parent
-					currNode->keyArray[0] = pairToAdd->key;
-					currNode->pageNoArray[0] = pairToAdd->pageId;
+					return nullptr;
 				}
 
 				//there is an internal node split
@@ -231,42 +230,31 @@ namespace badgerdb
 					PageId newInternalId;
 					this->bufMgr->allocPage(this->file, newInternalId, newPage);
 					NonLeafNodeInt *newInternalNode = reinterpret_cast<NonLeafNodeInt *>(newPage);
+
+					std::fill(newInternalNode->keyArray,newInternalNode->keyArray+nodeOccupancy,INT_MAX);
+                        		std::fill(newInternalNode->pageNoArray,newInternalNode->pageNoArray+nodeOccupancy,0);
+                        		newInternalNode -> level = currNode->level;
+
 					newInternalNode->numKeys = 0;
 
-					//find where to enter the new key and where to split the node. Has to be where the value before 
-					int whereToSplit = 0;
-					for(int i = 0; i < INTARRAYNONLEAFSIZE; i++){
-						if(pairToAdd->key < currNode->keyArray[i]){
-							whereToSplit = i;
-						}
+					pairToAdd newPair;
+					 newPair.pageNo = newInternalId;
+                                        newPair.key = currNode->keyArray[(nodeOccupancy)%2];
+					currNode->keyArray[(nodeOccupancy)%2] = INT_MAX;
+
+					int j =0;
+					for(int i = nodeOccupancy%2+1; i< nodeOccupancy; i++){
+						newInternalNode->pageNoArray[j] = currNode->pageNoArray[i];
+						newInternalNode->keyArray[j] =  currNode -> keyArray[i];
+						j++;
+
+						currNode->pageArray[i] = 0;
+						currNode -> keyArray[i] = INT_MAX;
 					}
-				
-					//if the key being pushed up in the split is either less than everything 
-					//in the full node or greater than everything in the full node
-					if(whereToSplit == 0){
-						newInternalNode->keyArray[0] = pairToAdd->key;
-						newInternalNode->pageNoArray[0] = pairToAdd->pageId;
-					}
+					newInternalNode->keyArray[j] =  currNode -> keyArray[nodeOccupancy];
+					currNode -> pageNoArray[nodeOccupancy] = INT_MAX;
 
-					//otherwise, we copy the values for everything greater than the pushed up key
-					//into the new internal sibling node and leave the ones less than the key in the 
-					//original internal node
-					else{
-						for(int i = whereToSplit; i < INTARRAYNONLEAFSIZE; i++){
-							newInternalNode->keyArray[(i - whereToSplit) + 1] = currNode->keyArray[i];
-							currNode->numKeys--;
-							newInternalNode->numKeys++;
-						}
-
-						//same thing but for pageNoArray, since it has different dimensions
-						for(int i = whereToSplit; i < INTARRAYNONLEAFSIZE + 1; i++){
-							newInternalNode->pageNoArray[(i - whereToSplit) + 1] = currNode->pageNoArray[i];
-						}
-
-						newInternalNode->keyArray[0] = pairToAdd->key;
-						newInternalNode->pageNoArray[0] = pairToAdd->pageId;
-					}
-
+					retrun newPair;
 				}
 			}
 		}
