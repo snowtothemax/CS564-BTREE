@@ -16,7 +16,6 @@
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
 #include "exceptions/page_pinned_exception.h"
-#include <climits>
 
 //#define DEBUG
 
