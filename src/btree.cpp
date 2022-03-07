@@ -49,8 +49,8 @@ namespace badgerdb
 		try
 		{
 			// if the index already exists
-			BlobFile indexFile = BlobFile::open(outIndexName);
-			this->file = &indexFile;
+			BlobFile *indexFile =  new BlobFile(outIndexName,false);
+			this->file = indexFile;
 			Page *temp;
 			IndexMetaInfo *header;
 			bufMgr->readPage(file, headerPageNum, temp);
@@ -71,8 +71,8 @@ namespace badgerdb
 		catch (FileNotFoundException ex)
 		{
 			// no pre-existing index
-			BlobFile indexFile = BlobFile::create(outIndexName);
-			this->file = &indexFile;
+			BlobFile *indexFile = new BlobFile(outIndexName,true);
+			this->file = indexFile;
 			this->rootPageNum = 2;
 
 			// create header page
@@ -236,6 +236,7 @@ namespace badgerdb
 				if (currNode->getNumKeys() < nodeOccupancy)
 				{
 					simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, currNode);
+					this->bufMgr->unPinPage(this->file, currPageId, true);
 					return nullPair;
 				}
 
@@ -256,6 +257,7 @@ namespace badgerdb
 					newPair.key = currNode->keyArray[(nodeOccupancy) / 2];
 					currNode->keyArray[(nodeOccupancy) / 2] = INT_MAX;
 
+					//split
 					int j = 0;
 					for (int i = nodeOccupancy / 2 + 1; i < nodeOccupancy; i++)
 					{
@@ -266,8 +268,12 @@ namespace badgerdb
 						currNode->pageNoArray[i] = 0;
 						currNode->keyArray[i] = INT_MAX;
 					}
+
+
 					newInternalNode->pageNoArray[j] = currNode->pageNoArray[nodeOccupancy];
 					currNode->pageNoArray[nodeOccupancy] = INT_MAX;
+
+					//insert
 					if (pairToAdd.key < newPair.key)
 					{
 						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, currNode);
@@ -276,6 +282,8 @@ namespace badgerdb
 					{
 						simpleNodeInsert(pairToAdd.key, pairToAdd.pageId, newInternalNode);
 					}
+					this->bufMgr->unPinPage(this->file, currPageId, true);
+					this->bufMgr->unPinPage(this->file, newInternalId, true);
 
 					return newPair;
 				}
@@ -292,6 +300,7 @@ namespace badgerdb
 			if (currNode->getNumKeys() < INTARRAYLEAFSIZE)
 			{
 				simpleLeafInsert(key, rid, currNode);
+				 this->bufMgr->unPinPage(this->file, currPageId, true);
 				return nullPair;
 			}
 			else // SPLITTING TIME BABY
