@@ -15,11 +15,7 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
-<<<<<<< HEAD
-=======
 #include "exceptions/page_pinned_exception.h"
-#include <climits>
->>>>>>> 21bed4af5066ac5bb34ca1deffdb498a7f624f7a
 
 //#define DEBUG
 
@@ -90,25 +86,25 @@ namespace badgerdb
 			NonLeafNodeInt *root;
 			bufMgr->allocPage(file, rootPageNum, temp);
 
-			root = reinterpret_cast<NonLeafNodeInt*>(temp);
-			std::fill(root->keyArray,root->keyArray+nodeOccupancy,INT_MAX);
-			std::fill(root->pageNoArray,root->pageNoArray+nodeOccupancy,0);
-			root -> level = 1;
+			root = reinterpret_cast<NonLeafNodeInt *>(temp);
+			std::fill(root->keyArray, root->keyArray + nodeOccupancy, INT_MAX);
+			std::fill(root->pageNoArray, root->pageNoArray + nodeOccupancy, 0);
+			root->level = 1;
 
 			// Initialize first leaf
-                        LeafNodeInt *leaf;
-			int leafNum;
-                        bufMgr->allocPage(file, leafNum, temp);
+			LeafNodeInt *leaf;
+			PageId leafNum;
+			bufMgr->allocPage(file, leafNum, temp);
 
-                        leaf = reinterpret_cast<NonLeafNodeInt*>(temp);
-                        std::fill(leaf->keyArray,leaf->keyArray+nodeOccupancy,INT_MAX);
-                        std::fill(leaf->ridArray,leaf->ridArray+leafOccupancy,0);
-                        leaf -> rightSibPageNo = 0;
-			
-			root ->pageNoArray[0] = leafNum;
+			leaf = reinterpret_cast<LeafNodeInt *>(temp);
+			std::fill(leaf->keyArray, leaf->keyArray + nodeOccupancy, INT_MAX);
+			std::fill(leaf->ridArray, leaf->ridArray + leafOccupancy, 0);
+			leaf->rightSibPageNo = 0;
+
+			root->pageNoArray[0] = leafNum;
 
 			bufMgr->unPinPage(file, rootPageNum, true);
-                        bufMgr->unPinPage(file, leafNum, true);
+			bufMgr->unPinPage(file, leafNum, true);
 
 			// fill header info
 			relationName.copy(header->relationName, 20);
@@ -207,16 +203,18 @@ namespace badgerdb
 			{
 				// check if there is space for the key page pair in the current array
 
-				//there does not need to be an internal node split and the middle value of the old node is being pushed up
-				if(currNode->numKeys < nodeOccupancy){
+				// there does not need to be an internal node split and the middle value of the old node is being pushed up
+				if (currNode->getNumKeys() < nodeOccupancy)
+				{
 
-					//shifting all values in the key array one to the right
-					for(int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--){
-						if (pairToAdd -> key > currNode->keyArray[i]){
+					// shifting all values in the key array one to the right
+					for (int i = INTARRAYNONLEAFSIZE - 1; i > 0; i--)
+					{
+						if (pairToAdd->key > currNode->keyArray[i])
+						{
 							currNode->keyArray[i] = pairToAdd->key;
-                                        		currNode->pageNoArray[i] = pairToAdd->pageId;
+							currNode->pageNoArray[i] = pairToAdd->pageId;
 							break;
-
 						}
 						currNode->keyArray[i] = currNode->keyArray[i - 1];
 						currNode->pageNoArray[i] = currNode->pageNoArray[i - 1];
@@ -224,37 +222,38 @@ namespace badgerdb
 					return nullptr;
 				}
 
-				//there is an internal node split
-				else{
+				// there is an internal node split
+				else
+				{
 					Page *newPage;
 					PageId newInternalId;
 					this->bufMgr->allocPage(this->file, newInternalId, newPage);
 					NonLeafNodeInt *newInternalNode = reinterpret_cast<NonLeafNodeInt *>(newPage);
 
-					std::fill(newInternalNode->keyArray,newInternalNode->keyArray+nodeOccupancy,INT_MAX);
-                        		std::fill(newInternalNode->pageNoArray,newInternalNode->pageNoArray+nodeOccupancy,0);
-                        		newInternalNode -> level = currNode->level;
+					std::fill(newInternalNode->keyArray, newInternalNode->keyArray + nodeOccupancy, INT_MAX);
+					std::fill(newInternalNode->pageNoArray, newInternalNode->pageNoArray + nodeOccupancy, 0);
+					newInternalNode->level = currNode->level;
 
-					newInternalNode->numKeys = 0;
 
-					pairToAdd newPair;
-					 newPair.pageNo = newInternalId;
-                                        newPair.key = currNode->keyArray[(nodeOccupancy)/2];
-					currNode->keyArray[(nodeOccupancy)%2] = INT_MAX;
+					KeyPagePair newPair;
+					newPair.pageId = newInternalId;
+					newPair.key = currNode->keyArray[(nodeOccupancy) / 2];
+					currNode->keyArray[(nodeOccupancy) / 2] = INT_MAX;
 
-					int j =0;
-					for(int i = nodeOccupancy/2+1; i< nodeOccupancy; i++){
+					int j = 0;
+					for (int i = nodeOccupancy / 2 + 1; i < nodeOccupancy; i++)
+					{
 						newInternalNode->pageNoArray[j] = currNode->pageNoArray[i];
-						newInternalNode->keyArray[j] =  currNode -> keyArray[i];
+						newInternalNode->keyArray[j] = currNode->keyArray[i];
 						j++;
 
-						currNode->pageArray[i] = 0;
-						currNode -> keyArray[i] = INT_MAX;
+						currNode->pageNoArray[i] = 0;
+						currNode->keyArray[i] = INT_MAX;
 					}
-					newInternalNode->keyArray[j] =  currNode -> keyArray[nodeOccupancy];
-					currNode -> pageNoArray[nodeOccupancy] = INT_MAX;
+					newInternalNode->pageNoArray[j] = currNode->pageNoArray[nodeOccupancy];
+					currNode->pageNoArray[nodeOccupancy] = INT_MAX;
 
-					retrun newPair;
+					return newPair;
 				}
 			}
 		}
@@ -265,7 +264,7 @@ namespace badgerdb
 
 			// check if there is enough space available on the leaf
 			// I.E NO SPLITTING
-			if (currNode->numKeys + 1 <= INTARRAYLEAFSIZE)
+			if (currNode->getNumKeys()  < INTARRAYLEAFSIZE)
 			{
 				simpleLeafInsert(key,rid, currNode);
 				return nullptr;
@@ -279,15 +278,12 @@ namespace badgerdb
 				PageId sibId;
 				this->bufMgr->allocPage(this->file, sibId, newSibPage);
 				newSibNode = reinterpret_cast<LeafNodeInt *>(newSibPage);
-				newSibNode->numKeys = 0;
 
 				// copy contents of old array into new array
 				for (int i = INTARRAYLEAFSIZE / 2; i < INTARRAYLEAFSIZE; i++)
 				{
 					newSibNode->keyArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->keyArray[i];
 					newSibNode->ridArray[i - (INTARRAYLEAFSIZE / 2)] = currNode->ridArray[i];
-					currNode->numKeys -= 1;
-					newSibNode->numKeys += 1;
 				}
 
 				// have new sibling point to original nodes neighbor
@@ -330,14 +326,14 @@ namespace badgerdb
 							   const void *highValParm,
 							   const Operator highOpParm)
 	{
-		if( !(lowOpParm == GT ||lowOpParm == GTE) ||
-		    !(highOpParm == LT||highOpParm == LTE)    ){
-				throw BadOpcodesException();
+		if (!(lowOpParm == GT || lowOpParm == GTE) ||
+			!(highOpParm == LT || highOpParm == LTE))
+		{
+			throw BadOpcodesException();
 		}
 
-		
-		lowValInt = *(int*)lowValParm;
-		highValInt = *(int*)highValParm;
+		lowValInt = *(int *)lowValParm;
+		highValInt = *(int *)highValParm;
 		lowValDouble = 1.0 * lowValInt;
 		highValDouble = 1.0 * highValInt;
 		lowValString = std::to_string(lowValInt);
@@ -345,96 +341,110 @@ namespace badgerdb
 		lowOp = lowOpParm;
 		highOp = highOpParm;
 
-		if(lowValInt>highValInt){
-			throw  BadScanrangeException();
+		if (lowValInt > highValInt)
+		{
+			throw BadScanrangeException();
 		}
 
 		scanExecuting = true;
 
 		int lb = lowValInt;
 		int ub = highValInt;
-		if (lowOp == GT){
-			lb ++;
+		if (lowOp == GT)
+		{
+			lb++;
 		}
-		if(highOp == LT){
+		if (highOp == LT)
+		{
 			ub--;
 		}
 
-		Page* temp;
-                NonLeafNodeInt* curr;
-                bufMgr->readPage(file, rootPageNum, temp);
-                curr = reinterpret_cast<NonLeafNodeInt*>(temp);
+		Page *temp;
+		NonLeafNodeInt *curr;
+		bufMgr->readPage(file, rootPageNum, temp);
+		curr = reinterpret_cast<NonLeafNodeInt *>(temp);
 		int currNo = rootPageNum;
 		int next;
-		while(curr->level == 0){
+		while (curr->level == 0)
+		{
 			next = curr->pageNoArray[nodeOccupancy];
-			for(int i = 0; i<nodeOccupancy; i++){
-				if (lb < curr->keyArray[i]){
+			for (int i = 0; i < nodeOccupancy; i++)
+			{
+				if (lb < curr->keyArray[i])
+				{
 					next = curr->pageNoArray[i];
 					break;
 				}
 			}
-			if(next == 0){
+			if (next == 0)
+			{
 				scanExecuting = false;
 				throw NoSuchKeyFoundException();
 			}
-			bufMgr ->unPinPage(file,currNo,false);
+			bufMgr->unPinPage(file, currNo, false);
 
 			currNo = next;
 			bufMgr->readPage(file, currNo, temp);
-                	curr = reinterpret_cast<NonLeafNodeInt*>(temp);
+			curr = reinterpret_cast<NonLeafNodeInt *>(temp);
 		}
 
-
 		next = curr->pageNoArray[nodeOccupancy];
-                for(int i = 0; i<nodeOccupancy; i++){
-                        if (lb < curr->keyArray[i]){
-                                next = curr->pageNoArray[i];
-                                break;
-                        }
-                }
-                if(next == 0){
+		for (int i = 0; i < nodeOccupancy; i++)
+		{
+			if (lb < curr->keyArray[i])
+			{
+				next = curr->pageNoArray[i];
+				break;
+			}
+		}
+		if (next == 0)
+		{
 			scanExecuting = false;
-                        throw NoSuchKeyFoundException();
-                }
-                bufMgr ->unPinPage(file,currNo,false);
+			throw NoSuchKeyFoundException();
+		}
+		bufMgr->unPinPage(file, currNo, false);
 
-                currNo = next;
-                bufMgr->readPage(file, currNo, temp);
-                LeafNodeInt* currLeaf = reinterpret_cast<LeafNodeInt*>(temp);
-		while(currLeaf->rightSibPageNo  != 0){
-			for(int i = 0; i<leafOccupancy; i++){
-				if(currLeaf->keyArray[i]>ub){
+		currNo = next;
+		bufMgr->readPage(file, currNo, temp);
+		LeafNodeInt *currLeaf = reinterpret_cast<LeafNodeInt *>(temp);
+		while (currLeaf->rightSibPageNo != 0)
+		{
+			for (int i = 0; i < leafOccupancy; i++)
+			{
+				if (currLeaf->keyArray[i] > ub)
+				{
 					scanExecuting = false;
 					throw NoSuchKeyFoundException();
 				}
-				if(currLeaf->keyArray[i]>=lb){
+				if (currLeaf->keyArray[i] >= lb)
+				{
 					currentPageNum = currNo;
 					currentPageData = temp;
 					nextEntry = i;
 					return;
-                                }
-
+				}
 			}
 			next = currLeaf->rightSibPageNo;
-			bufMgr ->unPinPage(file,currNo,false);
+			bufMgr->unPinPage(file, currNo, false);
 			currNo = next;
-                	bufMgr->readPage(file, currNo, temp);
-                	currLeaf = reinterpret_cast<LeafNodeInt*>(temp);
+			bufMgr->readPage(file, currNo, temp);
+			currLeaf = reinterpret_cast<LeafNodeInt *>(temp);
 		}
-		for(int i = 0; i<leafOccupancy; i++){
-                	if(currLeaf->keyArray[i]>ub){
+		for (int i = 0; i < leafOccupancy; i++)
+		{
+			if (currLeaf->keyArray[i] > ub)
+			{
 				scanExecuting = false;
-                                throw NoSuchKeyFoundException();
-                        }
-                        if(currLeaf->keyArray[i]>=lb){
-                                currentPageNum = currNo;
-                                currentPageData= temp;
-                                nextEntry = i;
-                                return;
-                        }
-
-                }		
+				throw NoSuchKeyFoundException();
+			}
+			if (currLeaf->keyArray[i] >= lb)
+			{
+				currentPageNum = currNo;
+				currentPageData = temp;
+				nextEntry = i;
+				return;
+			}
+		}
 		scanExecuting = false;
 		throw NoSuchKeyFoundException();
 	}
@@ -445,36 +455,42 @@ namespace badgerdb
 
 	void BTreeIndex::scanNext(RecordId &outRid)
 	{
-		if (!scanExecuting){
+		if (!scanExecuting)
+		{
 			throw ScanNotInitializedException();
 		}
-		if (nextEntry == -1){
+		if (nextEntry == -1)
+		{
 			throw IndexScanCompletedException();
 		}
-		LeafNodeInt* currLeaf = reinterpret_cast<LeafNodeInt*>(currentPageData);
+		LeafNodeInt *currLeaf = reinterpret_cast<LeafNodeInt *>(currentPageData);
 		outRid = currLeaf->ridArray[nextEntry];
-                int ub = highValInt;
-                if(highOp == LT){
-                        ub--;
-                }
-		nextEntry = (nextEntry+1)%leafOccupancy;
-		if(nextEntry ==0){
-			if(currLeaf->rightSibPageNo  == 0){
-				bufMgr ->unPinPage(file,currentPageNum ,false);
+		int ub = highValInt;
+		if (highOp == LT)
+		{
+			ub--;
+		}
+		nextEntry = (nextEntry + 1) % leafOccupancy;
+		if (nextEntry == 0)
+		{
+			if (currLeaf->rightSibPageNo == 0)
+			{
+				bufMgr->unPinPage(file, currentPageNum, false);
 				nextEntry = -1;
 				return;
 			}
 			int next = currLeaf->rightSibPageNo;
-                        bufMgr ->unPinPage(file,currentPageNum ,false);
-                        currentPageNum = next;
-                        bufMgr->readPage(file, currentPageNum, currentPageData);
-			currLeaf = reinterpret_cast<LeafNodeInt*>(currentPageData);
+			bufMgr->unPinPage(file, currentPageNum, false);
+			currentPageNum = next;
+			bufMgr->readPage(file, currentPageNum, currentPageData);
+			currLeaf = reinterpret_cast<LeafNodeInt *>(currentPageData);
 
-			if(currLeaf->keyArray[nextEntry]>ub){
-				bufMgr ->unPinPage(file,currentPageNum ,false);
-                                nextEntry = -1;
+			if (currLeaf->keyArray[nextEntry] > ub)
+			{
+				bufMgr->unPinPage(file, currentPageNum, false);
+				nextEntry = -1;
 				return;
-                        }
+			}
 		}
 	}
 
@@ -485,7 +501,7 @@ namespace badgerdb
 	void BTreeIndex::endScan()
 	{
 		if (!scanExecuting)
-			throw ScanNotInitializedException("No scan in progress!");
+			throw ScanNotInitializedException();
 
 		// Set all values to null
 		this->scanExecuting = false;
@@ -524,8 +540,6 @@ namespace badgerdb
                                 // insert key and rid at specified positions
                                 currNode->keyArray[i] = key;
                                 currNode->ridArray[i] = rid;
-                                currNode->numKeys += 1;
 	}
-
 
 }
