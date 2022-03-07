@@ -365,6 +365,7 @@ void intTests()
 	BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
 
 	// run some tests
+	checkPassFail(intScan(&index, 0, GTE, 4999, LTE), 5000)
 	checkPassFail(intScan(&index, 25, GT, 40, LT), 14)
 		checkPassFail(intScan(&index, 20, GTE, 35, LTE), 16)
 			checkPassFail(intScan(&index, -3, GT, 3, LT), 3)
@@ -372,6 +373,7 @@ void intTests()
 					checkPassFail(intScan(&index, 0, GT, 1, LT), 0)
 						checkPassFail(intScan(&index, 300, GT, 400, LT), 99)
 							checkPassFail(intScan(&index, 3000, GTE, 4000, LT), 1000)
+
 }
 
 int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp)

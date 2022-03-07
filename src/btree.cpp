@@ -46,7 +46,6 @@ namespace badgerdb
 		std::ostringstream idxStr;
 		idxStr << relationName << '.' << attrByteOffset;
 		outIndexName = idxStr.str();
-
 		try
 		{
 			// if the index already exists
@@ -69,7 +68,7 @@ namespace badgerdb
 			this->rootPageNum = header->rootPageNo;
 			bufMgr->unPinPage(file, headerPageNum, false);
 		}
-		catch (FileNotFoundException *ex)
+		catch (FileNotFoundException ex)
 		{
 			// no pre-existing index
 			BlobFile indexFile = BlobFile::create(outIndexName);
@@ -128,7 +127,7 @@ namespace badgerdb
 					key = record + attrByteOffset;
 					this->insertEntry(key, rid);
 				}
-				catch (EndOfFileException *x)
+				catch (EndOfFileException x)
 				{
 					break;
 				}
@@ -503,12 +502,17 @@ namespace badgerdb
 		}
 		LeafNodeInt *currLeaf = reinterpret_cast<LeafNodeInt *>(currentPageData);
 		outRid = currLeaf->ridArray[nextEntry];
-		int ub = highValInt;
-		if (highOp == LT)
-		{
-			ub--;
-		}
 		nextEntry = (nextEntry + 1) % leafOccupancy;
+
+		 int ub = highValInt;
+                if (highOp == LT)
+                {
+                        ub--;
+                }
+		if(currLeaf->keyArray[nextEntry] == INT_MAX){
+			nextEntry = 0;
+		}
+
 		if (nextEntry == 0)
 		{
 			if (currLeaf->rightSibPageNo == 0)
@@ -517,19 +521,19 @@ namespace badgerdb
 				nextEntry = -1;
 				return;
 			}
-			int next = currLeaf->rightSibPageNo;
+			PageId next = currLeaf->rightSibPageNo;
 			bufMgr->unPinPage(file, currentPageNum, false);
 			currentPageNum = next;
 			bufMgr->readPage(file, currentPageNum, currentPageData);
 			currLeaf = reinterpret_cast<LeafNodeInt *>(currentPageData);
 
-			if (currLeaf->keyArray[nextEntry] > ub)
-			{
-				bufMgr->unPinPage(file, currentPageNum, false);
-				nextEntry = -1;
-				return;
-			}
 		}
+		if (currLeaf->keyArray[nextEntry] > ub)
+                        {
+                                bufMgr->unPinPage(file, currentPageNum, false);
+                                nextEntry = -1;
+                                return;
+                        }
 	}
 
 	// -----------------------------------------------------------------------------
