@@ -239,11 +239,11 @@ namespace badgerdb
 
 					pairToAdd newPair;
 					 newPair.pageNo = newInternalId;
-                                        newPair.key = currNode->keyArray[(nodeOccupancy)%2];
+                                        newPair.key = currNode->keyArray[(nodeOccupancy)/2];
 					currNode->keyArray[(nodeOccupancy)%2] = INT_MAX;
 
 					int j =0;
-					for(int i = nodeOccupancy%2+1; i< nodeOccupancy; i++){
+					for(int i = nodeOccupancy/2+1; i< nodeOccupancy; i++){
 						newInternalNode->pageNoArray[j] = currNode->pageNoArray[i];
 						newInternalNode->keyArray[j] =  currNode -> keyArray[i];
 						j++;
@@ -267,36 +267,7 @@ namespace badgerdb
 			// I.E NO SPLITTING
 			if (currNode->numKeys + 1 <= INTARRAYLEAFSIZE)
 			{
-				int i = 0;
-				// find where to insert
-				while (i < currNode->numKeys)
-				{
-					if (currNode->keyArray[i] > key)
-					{
-						// Shift contents of keyarray
-						for (int l = currNode->numKeys; l > i; l--)
-						{
-							currNode->keyArray[l] = currNode->keyArray[l - 1];
-						}
-						// shift contents of ridArray
-						for (int k = currNode->numKeys; k > i; k--)
-						{
-							currNode->ridArray[k] = currNode->ridArray[k - 1];
-						}
-
-						// after contents shifted, exit
-						break;
-					}
-					i += 1;
-				}
-
-				// insert key and rid at specified positions
-				currNode->keyArray[i] = key;
-				currNode->ridArray[i] = rid;
-				currNode->numKeys += 1;
-
-				// unpin page and return
-				this->bufMgr->unPinPage(this->file, currPageId, true);
+				simpleLeafInsert(key,rid, currNode);
 				return nullptr;
 			}
 			else // SPLITTING TIME BABY
@@ -326,63 +297,11 @@ namespace badgerdb
 				// now we insert the value as we did before
 				if (newSibNode->keyArray[0] > key) // insert into orig sib
 				{
-					int i = 0;
-					// find where to insert
-					while (i < currNode->numKeys)
-					{
-						if (currNode->keyArray[i] > key)
-						{
-							// Shift contents of keyarray
-							for (int l = currNode->numKeys; l > i; l--)
-							{
-								currNode->keyArray[l] = currNode->keyArray[l - 1];
-							}
-							// shift contents of ridArray
-							for (int k = currNode->numKeys; k > i; k--)
-							{
-								currNode->ridArray[k] = currNode->ridArray[k - 1];
-							}
-
-							// after contents shifted, exit
-							break;
-						}
-						i += 1;
-					}
-
-					// insert key and rid at specified positions
-					currNode->keyArray[i] = key;
-					currNode->ridArray[i] = rid;
-					currNode->numKeys += 1;
+					simpleLeafInsert(key,rid, currNode);
 				}
 				else // insert into new sib
 				{
-					int i = 0;
-					// find where to insert
-					while (i < newSibNode->numKeys)
-					{
-						if (newSibNode->keyArray[i] > key)
-						{
-							// Shift contents of keyarray
-							for (int l = newSibNode->numKeys; l > i; l--)
-							{
-								newSibNode->keyArray[l] = newSibNode->keyArray[l - 1];
-							}
-							// shift contents of ridArray
-							for (int k = newSibNode->numKeys; k > i; k--)
-							{
-								newSibNode->ridArray[k] = newSibNode->ridArray[k - 1];
-							}
-
-							// after contents shifted, exit
-							break;
-						}
-						i += 1;
-					}
-
-					// insert key and rid at specified positions
-					newSibNode->keyArray[i] = key;
-					newSibNode->ridArray[i] = rid;
-					newSibNode->numKeys += 1;
+					simpleLeafInsert(key,rid, newSibNode);
 				}
 
 				// close both nodes and push up inserted values
@@ -576,5 +495,37 @@ namespace badgerdb
 		this->currentPageData = 0;
 		this->currentPageNum = -1;
 	}
+
+	void BTreeIndex::simpleLeafInsert(int key, const RecordId rid, LeafNodeInt * currNode)
+        {
+                                int i = 0;
+                                // find where to insert
+                                while (i < currNode->getNumKeys())
+                                {
+                                        if (currNode->keyArray[i] > key)
+                                        {
+                                                // Shift contents of keyarray
+                                                for (int l = currNode->getNumKeys(); l > i; l--)
+                                                {
+                                                        currNode->keyArray[l] = currNode->keyArray[l - 1];
+                                                }
+                                                // shift contents of ridArray
+                                                for (int k = currNode->getNumKeys(); k > i; k--)
+                                                {
+                                                        currNode->ridArray[k] = currNode->ridArray[k - 1];
+                                                }
+
+                                                // after contents shifted, exit
+                                                break;
+                                        }
+                                        i += 1;
+                                }
+
+                                // insert key and rid at specified positions
+                                currNode->keyArray[i] = key;
+                                currNode->ridArray[i] = rid;
+                                currNode->numKeys += 1;
+	}
+
 
 }

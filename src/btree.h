@@ -189,7 +189,7 @@ struct LeafNodeInt{
 struct KeyPagePair{
   int key;
   PageId pageId;
-}
+};
 
 
 /**
@@ -303,7 +303,7 @@ class BTreeIndex {
    */
 	Operator	highOp;
 
-	
+	void simpleLeafInsert(int key, const RecordId rid, LeafNodeInt * currNode);
  public:
 
   /**
@@ -350,7 +350,7 @@ class BTreeIndex {
    * @param currPage 
    * @return KeyPagePair - KeyPagePair in which to push up
    */
-  KeyPagePair* recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage)
+  KeyPagePair* recursiveInsert(int key, const RecordId rid, const bool isLeaf, PageId currPage);
 
 
   /**
