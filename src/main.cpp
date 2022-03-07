@@ -573,6 +573,104 @@ void errorTests()
 	}
 }
 
+void manySearchKeyTest()
+{
+	{
+		std::cout << "Lots Of Search Keys Test" << std::endl;
+		std::cout << "------------------------" << std::endl;
+		// Given error test
+
+		try
+		{
+			File::remove(relationName);
+		}
+		catch (const FileNotFoundException &e)
+		{
+		}
+
+		file1 = new PageFile(relationName, true);
+
+		// initialize all of record1.s to keep purify happy
+		memset(record1.s, ' ', sizeof(record1.s));
+		PageId new_page_number;
+		Page new_page = file1->allocatePage(new_page_number);
+
+		// Insert 5000 tuples
+		for (int i = 0; i < 5000; i++)
+		{
+			sprintf(record1.s, "%05d string record", i);
+			record1.i = i;
+			record1.d = (double)i;
+			std::string new_data(reinterpret_cast<char *>(&record1), sizeof(record1));
+
+			while (1)
+			{
+				try
+				{
+					new_page.insertRecord(new_data);
+					break;
+				}
+				catch (const InsufficientSpaceException &e)
+				{
+					file1->writePage(new_page_number, new_page);
+					new_page = file1->allocatePage(new_page_number);
+				}
+			}
+		}
+		file1->writePage(new_page_number, new_page);
+
+		BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple, i), INTEGER);
+
+		// search from -1000 to 6000
+		int low = -1000;
+		int high = 6000;
+
+		try
+		{
+			index.startScan(&low, GTE, &high, LTE);
+		}
+		catch (NoSuchKeyFoundException *ex)
+		{
+			std::cout < "Test 5 failed: No such key from startScan()" < std::endl;
+		}
+		catch (BadScanrangeException *ex)
+		{
+			std::cout < "Test 5 failed: Bad scan range from startScan()" < std::endl;
+		}
+		catch (BadOpcodesException *ex)
+		{
+			std::cout < "Test 5 failed: Bad opcodes from startScan()" < std::endl;
+		}
+
+		int count = 0;
+		while(1) {
+			try {
+				RecordId rid;
+				index.scanNext(rid);
+				count += 1;
+			} catch (ScanNotInitializedException *ex) {
+				std::cout < "Test 5 failed: scan was not initialized when it should have been" < std::endl;
+			} catch (IndexScanCompletedException *ex) {
+				break;
+			}
+		}
+
+		if (count != 5000) {
+			std::cout < "Test 5 failed: Did not scan the correct number of records" < std::endl;
+		}
+
+		deleteRelation();
+	}
+
+	try
+	{
+		File::remove(intIndexName);
+	}
+	catch (const FileNotFoundException &e)
+	{
+	}
+}
+
 void deleteRelation()
 {
 	if (file1)
