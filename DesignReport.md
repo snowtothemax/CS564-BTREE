@@ -1,7 +1,7 @@
 # Design report
 ### Constructor:
 
-For the B-tree constructor we chose to initialize an empty non-leaf root as well as a single empty leaf child. These decision slightly increase the space usage of very small trees, but help to simplify insertions and deletion through. We also use INT_MAX to dente an empty key and 0 for empty values. INT_MAX allows the B-TREE logic to know that all keys are on the left of missing nodes.  Since page numbers are always at least 1, 0 is a good null value.
+For the B-tree constructor we chose to initialize an empty non-leaf root as well as a single empty leaf child. These decision slightly increase the space usage of very small trees, but help to simplify insertions and splitting of nodes. We also use INT_MAX to dente an empty key and 0 for empty values. INT_MAX allows the B-TREE logic to know that all keys are on the left of missing nodes and since page numbers are always at least 1, 0 is a good null value. The construcor also insert the keys into the relation one at a time. This runs the insert method below $N$ times where n is the number keys to be inserted.
 
 The constructor leaves no pages pinned after running.
 
@@ -13,14 +13,14 @@ Insert keeps no pages pinned after it has finished running.
 
 Insert has at most $H+1$ pages pinned while inserting where H is height of the tree. We did the because we need to read those pages in order to loacte the key location, and it it more efficient to keep the keys in the buffer so that we do not have to re-read pages in the case that we have cascading inserts up the tree. Because B-Tree's do not have very large heights we thought this was a reasonable about of storage to expect the buffer to provide.
 
-**Efficiency: TODO **
+This method typically requires $H$ IO's where H is the height of the tree. It can be slightly worse (still $\mathcal{O}(H)$) in cases with many splits, but there cases are infrequent. 
 
 ### Scan: 
 When a scan is started by start scan, the b-tree traversed down to find the first valid key. If no valid key is found it throws an exception. It then stores the page and location where the key was found. scanNext continues on the page start scan found and increments the stored pointers, if the next key is valid.
 
 startScan will have 1 page pinned at any given time and when it returns it will leave one page pinned(the page with the first entry of the desired search). Throughout the entire scan process, from start scan until the last entry is found via scanNext, on page is kept pinned. We chose to keep one page pinned because we ecpect a sequential scan to refer to the same page in cosecutive calls of scanNext and it is more effieicent to store that page than to have to re-read it hundreds of time. 
 
-**Efficiency: TODO **
+This method prefroms on scan down the tree to find the first node an then is a lears can through leaves form there. Thus, the method take $H+N$ IO's where $H$ is the hight of the tree and $N$ is the number of leaf nodes containg entries in the range. 
 
 # Test report
 
