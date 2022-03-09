@@ -1,9 +1,9 @@
-btree.h  			                 header for btree
+btree.h  		header for btree
 
-btree.cpp		                  code for btree	
+btree.cpp		code for btree	
 
-main.cpp		 				  all test code (including our new tests)
+main.cpp		 	all test code (including our new tests)
 
-DesignReport.pdf			design report and test repot
+DesignReport.pdf		design report and test repot
 
-big                                      used by test (include in same dir that runs the program from)
+big                     	used by test (include in same dir that runs the program from)
